@@ -1,6 +1,67 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <script>
+    // GANTI TEKS DI BAWAH INI DENGAN URL WEB APP YANG ANDA SALIN DARI APPS SCRIPT
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxmzugOw4_bVD4k-kx0uIMB1PyCjY9GDQTTn7GziRf8nvbQblB7PzMI5LAbvky2STZcRg/exec";
+
+    // Mekanisme Polyfill menggunakan JavaScript Proxy
+    window.google = {
+        script: {
+            run: (function() {
+                function createRunner(successFn, failureFn) {
+                    const obj = {
+                        withSuccessHandler: function(callback) {
+                            return createRunner(callback, failureFn);
+                        },
+                        withFailureHandler: function(callback) {
+                            return createRunner(successFn, callback);
+                        }
+                    };
+                    
+                    return new Proxy(obj, {
+                        get(target, prop) {
+                            if (prop === 'withSuccessHandler' || prop === 'withFailureHandler') {
+                                return target[prop];
+                            }
+                            
+                            // Menangkap setiap pemanggilan fungsi backend secara dinamis
+                            return function(...args) {
+                                fetch(GAS_API_URL, {
+                                    method: "POST",
+                                    headers: { 
+                                        // Menggunakan text/plain untuk menghindari kendala pembatasan CORS Preflight di beberapa browser
+                                        "Content-Type": "text/plain;charset=utf-8" 
+                                    },
+                                    body: JSON.stringify({ action: prop, payload: args })
+                                })
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error("Koneksi ke Apps Script gagal (Status: " + response.status + ")");
+                                    }
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    if (data && data.error) {
+                                        if (failureFn) failureFn(data.error);
+                                        else console.error("GAS Backend Error:", data.error);
+                                    } else {
+                                        if (successFn) successFn(data);
+                                    }
+                                })
+                                .catch(error => {
+                                    if (failureFn) failureFn(error.message || error);
+                                    else console.error("Network Fetch Error:", error);
+                                });
+                            };
+                        }
+                    });
+                }
+                return createRunner(null, null);
+            })()
+        }
+    };
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoring Aktivasi JConnect</title>

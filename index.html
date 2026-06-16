@@ -65,6 +65,7 @@
         let isSidebarOpen = false;
         let currentInputFilterDate = getLocalYMD();
         let currentInputSearchTerm = '';
+        let currentDashboardDate = getLocalYMD();
 
         function getLocalYM() {
             const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -454,76 +455,53 @@
         // ============================================================
         // DASHBOARD
         // ============================================================
+        function changeDashboardDate(val) {
+            currentDashboardDate = val;
+            renderDashboard(document.getElementById('mainContent'));
+        }
+
         function renderDashboard(container) {
+            const filterDate = currentDashboardDate;
             let data = [...customers].filter(c => canViewData(c, currentUser));
+            let migrasiForDisplay = [...migrasiData].filter(m => canViewData(m, currentUser));
+
+            // Filter by selected date
+            if (filterDate) {
+                data = data.filter(c => c.date === filterDate);
+                migrasiForDisplay = migrasiForDisplay.filter(m => m.date === filterDate);
+            }
+
             const total = data.length;
             const sudah = data.filter(c => checkStatus(c.status, 'Sudah')).length;
             const belum = data.filter(c => checkStatus(c.status, 'Belum')).length;
             const tidakBisa = data.filter(c => checkStatus(c.status, 'Tidak')).length;
-            const todayDate = getLocalYMD();
-            const migrasiToday = migrasiData.filter(m => m.date === todayDate && canViewData(m, currentUser)).length;
+            const migrasiCount = migrasiForDisplay.length;
 
             const cards = `
                 <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-6">
                     <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-l-4 border-blue-500"><div class="text-xs text-gray-500 mb-1">Total Rekening Baru</div><div class="text-2xl font-bold text-gray-800">${total}</div></div>
-                    <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-l-4 border-purple-500"><div class="text-xs text-gray-500 mb-1">Migrasi Hari Ini</div><div class="text-2xl font-bold text-purple-600">${migrasiToday}</div></div>
+                    <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-l-4 border-purple-500"><div class="text-xs text-gray-500 mb-1">Migrasi</div><div class="text-2xl font-bold text-purple-600">${migrasiCount}</div></div>
                     <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-l-4 border-bjGreen"><div class="text-xs text-gray-500 mb-1">Sudah aktivasi</div><div class="text-2xl font-bold text-bjGreen">${sudah}</div></div>
                     <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-l-4 border-red-500"><div class="text-xs text-gray-500 mb-1">Belum aktivasi</div><div class="text-2xl font-bold text-red-500">${belum}</div></div>
                     <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-l-4 border-orange-500"><div class="text-xs text-gray-500 mb-1">Tidak bisa aktivasi</div><div class="text-2xl font-bold text-orange-500">${tidakBisa}</div></div>
                 </div>`;
 
-            let adminTrigger = '';
-            if (currentUser.role === 'admin') {
-                adminTrigger = `
-                    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div><h4 class="font-bold text-yellow-800"><i class="fas fa-archive mr-2"></i>Trigger Pemindahan Otomatis</h4><p class="text-xs text-yellow-700">Memindahkan data Rekening Baru yang diinput SEBELUM tanggal 1 bulan ini ke database Rekening Lama.</p></div>
-                        <button onclick="triggerMigrasiBulanLalu()" class="bg-yellow-600 text-white px-4 py-2 rounded text-sm hover:bg-yellow-700 shadow whitespace-nowrap">Jalankan Arsip</button>
-                    </div>`;
-            }
+            const dateLabel = filterDate ? formatDate(filterDate) : 'Semua Tanggal';
+            const displayData = data.slice(-10).reverse();
 
             container.innerHTML = `
                 <div id="dashboardContent" class="p-1 -m-1">
-                    <div class="flex justify-end mb-3"><button onclick="takeScreenshot('dashboardContent', 'Dashboard_JConnect')" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded shadow-sm text-sm"><i class="fas fa-camera mr-2 text-indigo-500"></i>Screenshot</button></div>
-                    ${adminTrigger}
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <label class="text-sm font-semibold text-gray-600"><i class="fas fa-calendar-alt mr-2 text-bjGreen"></i>Filter Tanggal:</label>
+                            <input type="date" id="dashboardDateFilter" value="${filterDate || ''}" onchange="changeDashboardDate(this.value)" class="border rounded-lg px-3 py-2 text-sm outline-none focus:border-bjGreen">
+                            <button onclick="changeDashboardDate('')" class="text-xs bg-gray-200 px-3 py-2 rounded hover:bg-gray-300 font-medium"><i class="fas fa-times mr-1"></i>Reset</button>
+                        </div>
+                        <button onclick="takeScreenshot('dashboardContent', 'Dashboard_JConnect')" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded shadow-sm text-sm"><i class="fas fa-camera mr-2 text-indigo-500"></i>Screenshot</button>
+                    </div>
                     ${cards}
-                    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="px-4 py-4 border-b font-semibold text-gray-700">10 Data Terbaru</div><div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Tanggal</th><th class="px-4 py-3">No Rekening</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Status</th></tr></thead><tbody>${data.slice(-10).reverse().map(c => `<tr class="border-b"><td class="px-4 py-3">${formatDate(c.date)}</td><td class="px-4 py-3 font-mono">${c.noRek}</td><td class="px-4 py-3"><div class="font-semibold text-gray-800">${c.nama}</div><div class="text-xs text-gray-500">${c.noHp || '-'}</div></td><td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-semibold ${checkStatus(c.status,'Sudah')?'bg-green-100 text-green-800':checkStatus(c.status,'Belum')?'bg-red-100 text-red-800':'bg-orange-100 text-orange-800'}">${displayStatusText(c.status)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="text-center py-4">Belum ada data</td></tr>'}</tbody></table></div></div>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="px-4 py-4 border-b font-semibold text-gray-700 flex justify-between items-center"><span>Data Tgl: <span class="text-bjGreen">${dateLabel}</span></span><span class="text-xs text-gray-500">${displayData.length} data</span></div><div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Tanggal</th><th class="px-4 py-3">No Rekening</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Status</th></tr></thead><tbody>${displayData.map(c => `<tr class="border-b"><td class="px-4 py-3">${formatDate(c.date)}</td><td class="px-4 py-3 font-mono">${c.noRek}</td><td class="px-4 py-3"><div class="font-semibold text-gray-800">${c.nama}</div><div class="text-xs text-gray-500">${c.noHp || '-'}</div></td><td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-semibold ${checkStatus(c.status,'Sudah')?'bg-green-100 text-green-800':checkStatus(c.status,'Belum')?'bg-red-100 text-red-800':'bg-orange-100 text-orange-800'}">${displayStatusText(c.status)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="text-center py-4">Belum ada data</td></tr>'}</tbody></table></div></div>
                 </div>`;
-        }
-
-        // ============================================================
-        // SUPABASE: MIGRASI ARSIP OTOMATIS
-        // ============================================================
-        async function triggerMigrasiBulanLalu() {
-            if (!confirm("Yakin ingin memindahkan data bulan lalu ke Rekening Lama secara permanen?")) return;
-            const d = new Date();
-            const cutoff = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-            showLoader(`Memindahkan data < ${cutoff}...`);
-            try {
-                // Ambil data aktivasi yang lebih lama dari tanggal cutoff
-                const { data: toMove, error: fetchErr } = await db.from('data_aktivasi').select('*').lt('date', cutoff);
-                if (fetchErr) throw fetchErr;
-                if (!toMove || toMove.length === 0) { hideLoader(); alert('Tidak ada data untuk dipindahkan.'); return; }
-
-                // Insert ke data_migrasi
-                const migrasiRows = toMove.map(r => ({
-                    id: r.id, date: r.date, kode_cabang: r.kode_cabang, cif: r.cif,
-                    no_rek: r.no_rek, tipe_produk: r.tipe_produk, nama: r.nama,
-                    no_hp: r.no_hp, user_estim: r.user_estim, nama_fasilitator: '',
-                    status: r.status, kendala: r.kendala
-                }));
-                const { error: insertErr } = await db.from('data_migrasi').upsert(migrasiRows);
-                if (insertErr) throw insertErr;
-
-                // Hapus dari data_aktivasi
-                const ids = toMove.map(r => r.id);
-                const { error: delErr } = await db.from('data_aktivasi').delete().in('id', ids);
-                if (delErr) throw delErr;
-
-                hideLoader();
-                alert(`Berhasil! ${toMove.length} baris data bulan lalu telah dipindah ke Rekening Lama.`);
-                await loadInitialData();
-                navigate('dashboard');
-            } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
         }
 
         // ============================================================

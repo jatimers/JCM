@@ -45,7 +45,6 @@
         // ============================================================
         const SUPABASE_URL = 'https://nnjmrwpdqxcxbqbrfytx.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uam1yd3BkcXhjeGJxYnJmeXR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NzkxNzUsImV4cCI6MjA5NzE1NTE3NX0.u3UfpRa4bddWTsybWMw7jEm-k5y_4SdrWqNfIyT1m0U';
-        const GSHEET_URL_DEFAULT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTEJ2Tb2Dh6LHrDnno3JtFj62TfLFjr38TZwpAtdU8rmHEK6jpAWmXq5FSyWfvcLxV-xF2w7AM1EPXn/pub?output=csv';
 
         const { createClient } = supabase;
         const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1319,28 +1318,6 @@
                         </div>
                         <button onclick="triggerResendWa()" class="bg-amber-600 text-white px-5 py-3 rounded-lg font-bold text-xs shadow hover:bg-amber-700 transition flex items-center shrink-0"><i class="fas fa-paper-plane mr-2"></i> Kirim Ulang Notif Hari Ini</button>
                     </div>
-
-                    <!-- Google Sheets Sync -->
-                    <div class="bg-white rounded-xl shadow-sm overflow-hidden border-t-4 border-green-500">
-                        <div class="px-4 py-4 border-b bg-gray-50 flex items-center">
-                            <i class="fas fa-cloud-download-alt text-green-600 text-xl mr-3"></i>
-                            <h3 class="font-bold text-gray-700">Sync Google Sheets</h3>
-                        </div>
-                        <div class="p-6 space-y-4">
-                            <p class="text-xs text-gray-500">Tarik data setting (WA Token, WA Target, WA Status) dari Google Sheets yang sudah di-<em>publish</em> sebagai CSV. Format sheet: <strong>Key,Value</strong>.</p>
-                            <div>
-                                <label class="block text-sm font-bold mb-1 text-gray-700">URL Google Sheet (Published CSV)</label>
-                                <div class="flex flex-col sm:flex-row gap-2">
-                                    <input type="text" id="gsheet_url" value="${appSettings.GSHEET_URL || GSHEET_URL_DEFAULT}" class="flex-1 border rounded-lg px-4 py-2 text-sm focus:border-bjGreen outline-none transition font-mono" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
-                                    <button onclick="syncFromGoogleSheet(document.getElementById('gsheet_url').value)" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow hover:bg-green-700 transition flex items-center justify-center whitespace-nowrap"><i class="fas fa-sync-alt mr-2"></i> Sync Sekarang</button>
-                                </div>
-                            </div>
-                            <div class="bg-blue-50 border border-blue-200 rounded p-3 text-xs text-blue-800">
-                                <strong><i class="fas fa-info-circle mr-1"></i> Cara publish Google Sheet:</strong><br>
-                                File → Share → Publish to web → Pilih "Comma-separated values (.csv)" → Copy link → Tempel di atas.
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 <style>
                     #wa_status:checked ~ .dot { transform: translateX(100%); background-color: #fff; }
@@ -1413,65 +1390,6 @@
                 const text = await resp.text();
                 return text;
             } catch (err) { return 'Error: ' + err.message; }
-        }
-
-        // ============================================================
-        // GOOGLE SHEETS SYNC (Published CSV → Supabase settings)
-        // ============================================================
-        async function syncFromGoogleSheet(url) {
-            if (!url) { showToast('URL Google Sheet belum dikonfigurasi!', true); return { ok: false, error: 'URL kosong' }; }
-            showLoader('Sinkronisasi Google Sheet...');
-            try {
-                // Fetch CSV dari Google Sheets yang sudah di-publish
-                const resp = await fetch(url);
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                const csvText = await resp.text();
-
-                // Parse CSV: format Key,Value
-                const lines = csvText.trim().split('\n');
-                if (lines.length < 2) throw new Error('CSV kosong atau hanya header');
-
-                const updates = [];
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    // Handle quoted values
-                    const match = line.match(/^(.+?),"?([^"]*)"?$/);
-                    if (match) {
-                        const key = match[1].trim();
-                        const value = match[2].trim();
-                        if (key) updates.push({ key, value });
-                    }
-                }
-
-                if (updates.length === 0) throw new Error('Tidak ada data key=value yang valid');
-
-                // Upsert ke Supabase settings
-                for (const upd of updates) {
-                    const { error } = await db.from('settings').upsert(upd, { onConflict: 'key' });
-                    if (error) throw error;
-                    // Update local state
-                    appSettings[upd.key] = upd.value;
-                }
-
-                // Simpan URL Google Sheet ke settings juga (supaya bisa di-recall)
-                await db.from('settings').upsert({ key: 'GSHEET_URL', value: url }, { onConflict: 'key' });
-                appSettings.GSHEET_URL = url;
-
-                hideLoader();
-                showToast(`Sync berhasil! ${updates.length} setting dari Google Sheet tersimpan.`);
-                // Refresh tampilan pengaturan jika sedang dibuka
-                if (currentView === 'pengaturan_wa') {
-                    renderPengaturanWA(document.getElementById('mainContent'));
-                }
-                return { ok: true, count: updates.length };
-            } catch (err) {
-                hideLoader();
-                const msg = 'Sync Gagal: ' + (err.message || JSON.stringify(err));
-                showToast(msg, true);
-                console.error('Google Sheets sync error:', err);
-                return { ok: false, error: err.message };
-            }
         }
     </script>
 </body>

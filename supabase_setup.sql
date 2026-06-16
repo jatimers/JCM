@@ -85,8 +85,7 @@ INSERT INTO public.settings (key, value)
 VALUES
     ('WA_TOKEN',  ''),
     ('WA_TARGET', ''),
-    ('WA_STATUS', 'OFF'),
-    ('GSHEET_URL', 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTEJ2Tb2Dh6LHrDnno3JtFj62TfLFjr38TZwpAtdU8rmHEK6jpAWmXq5FSyWfvcLxV-xF2w7AM1EPXn/pub?output=csv')
+    ('WA_STATUS', 'OFF')
 ON CONFLICT (key) DO NOTHING;
 
 -- ============================================================

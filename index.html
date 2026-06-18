@@ -43,6 +43,8 @@
         // ============================================================
         // KONFIGURASI SUPABASE — Ganti dengan kredensial project Anda
         // ============================================================
+        // VERSION: 2.0 — pagination fix (fetchAllRows)
+        console.log('%c🚀 JCM v2.0 pagination fix', 'font-size:16px;color:green;');
         const SUPABASE_URL = 'https://nnjmrwpdqxcxbqbrfytx.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uam1yd3BkcXhjeGJxYnJmeXR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NzkxNzUsImV4cCI6MjA5NzE1NTE3NX0.u3UfpRa4bddWTsybWMw7jEm-k5y_4SdrWqNfIyT1m0U';
 
@@ -147,20 +149,31 @@
         // ============================================================
         // SUPABASE: LOAD DATA AWAL
         // ============================================================
+        // Helper: ambil SEMUA baris dari tabel (handle pagination limit 1000)
+        async function fetchAllRows(tableName, chunkSize = 1000) {
+            let allRows = [], start = 0, hasMore = true;
+            while (hasMore) {
+                const { data, error } = await db.from(tableName).select('*').range(start, start + chunkSize - 1);
+                if (error) throw error;
+                if (data && data.length > 0) { allRows = allRows.concat(data); }
+                hasMore = data && data.length === chunkSize;
+                start += chunkSize;
+            }
+            return allRows;
+        }
+
         async function loadInitialData() {
             showLoader('Menghubungkan ke Database...');
             try {
-                const [usersRes, customersRes, migrasiRes, productsRes, settingsRes] = await Promise.all([
+                const [usersRes, customersData, migrasiDataRaw, productsRes, settingsRes] = await Promise.all([
                     db.from('users').select('*'),
-                    db.from('data_aktivasi').select('*'),
-                    db.from('data_migrasi').select('*'),
+                    fetchAllRows('data_aktivasi'),
+                    fetchAllRows('data_migrasi'),
                     db.from('produk').select('*'),
                     db.from('settings').select('*')
                 ]);
 
                 if (usersRes.error) throw usersRes.error;
-                if (customersRes.error) throw customersRes.error;
-                if (migrasiRes.error) throw migrasiRes.error;
                 if (productsRes.error) throw productsRes.error;
                 if (settingsRes.error) throw settingsRes.error;
 
@@ -169,13 +182,15 @@
                     role: r.role, userEstim: r.user_estim || '', password: r.password
                 }));
 
-                customers = (customersRes.data || [])
+                customers = (customersData || [])
                     .filter(r => r.id)
                     .map(r => mapAktivasiRow(r));
+                console.log('✅ customers loaded:', customers.length, 'rows');
 
-                migrasiData = (migrasiRes.data || [])
+                migrasiData = (migrasiDataRaw || [])
                     .filter(r => r.id)
                     .map(r => mapMigrasiRow(r));
+                console.log('✅ migrasiData loaded:', migrasiData.length, 'rows');
 
                 products = (productsRes.data || []).map(r => ({ kode: r.kode_produk, nama: r.nama_produk }));
 
@@ -564,18 +579,18 @@
                         let key = Object.keys(row).find(k => possibleKeys.includes(k.toLowerCase().trim()));
                         return key ? row[key].toString() : "";
                     };
-                    let cab = getVal(['kode cabang', 'kode_cabang']);
+                    let cab = getVal(['kodecabang', 'kode cabang', 'kode_cabang']);
                     if (currentUser.role === 'user') { cab = currentUser.id; }
-                    let cleanRek = getVal(['no_rekening', 'no rekening']).trim();
+                    let cleanRek = getVal(['norek', 'no_rekening', 'no rekening']).trim();
 
                     if (cleanRek !== "") {
                         let obj = {
                             date: dateInput, kode_cabang: cab,
                             cif: getVal(['cif']), no_rek: cleanRek,
-                            tipe_produk: getVal(['tipe_produk', 'tipe produk']),
-                            nama: getVal(['nama_rekening', 'nama rekening']),
-                            no_hp: getVal(['no hp', 'no_hp']),
-                            user_estim: getVal(['user_estim', 'user estim']),
+                            tipe_produk: getVal(['tipeproduk', 'tipe_produk', 'tipe produk']),
+                            nama: getVal(['nama', 'nama_rekening', 'nama rekening']),
+                            no_hp: getVal(['nohp', 'no hp', 'no_hp']),
+                            user_estim: getVal(['userinput', 'user_input', 'user_estim', 'user estim']),
                             kendala: ''
                         };
                         if (isMigrasi) {
@@ -817,6 +832,11 @@
                     <div class="flex items-center space-x-3 flex-wrap gap-y-2 justify-start lg:justify-end w-full lg:w-auto">
                         <div class="flex items-center"><input type="text" value="${currentInputSearchTerm}" onkeyup="changeInputSearch(this.value)" placeholder="Cari Nama/No Rek..." class="border rounded px-3 py-1.5 text-sm w-48 sm:w-64 outline-none focus:border-bjGreen"></div>
                         <div class="flex items-center border-l pl-3"><input type="date" value="${currentInputFilterDate}" class="border rounded px-3 py-1.5 text-sm outline-none focus:border-bjGreen" onchange="changeInputFilterDate(this.value)"><button onclick="changeInputFilterDate('')" class="text-xs bg-gray-200 px-3 py-2 rounded ml-2 hover:bg-gray-300 font-medium">Reset</button></div>
+                        <div class="flex items-center border-l pl-3 gap-2">
+                            <button onclick="downloadTemplateExcel(${tab === 'migrasi'})" class="text-xs bg-blue-50 text-blue-600 px-3 py-2 rounded hover:bg-blue-100 font-medium whitespace-nowrap" title="Download template Excel"><i class="fas fa-download mr-1"></i>Template</button>
+                            <button onclick="document.getElementById('importFileInput_${tab}').click()" class="text-xs bg-bjGreen text-white px-3 py-2 rounded hover:bg-bjGreenDark font-medium whitespace-nowrap"><i class="fas fa-upload mr-1"></i>Import Excel</button>
+                            <input type="file" id="importFileInput_${tab}" accept=".xlsx,.xls" onchange="handleInputImport(this, ${tab === 'migrasi'})" class="hidden">
+                        </div>
                     </div>
                 </div>`;
 
@@ -985,6 +1005,90 @@
                 alert("Berhasil Ditambahkan!");
                 renderInputAktivasi(document.getElementById('mainContent'), 'migrasi');
             } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
+        }
+
+        // Import Excel dari menu Input Aktivasi
+        async function handleInputImport(fileInput, isMigrasi) {
+            if (!fileInput.files.length) return;
+            const file = fileInput.files[0];
+            // Gunakan tanggal filter jika ada, jika tidak pakai hari ini
+            const importDate = currentInputFilterDate || getLocalYMD();
+            const tableName = isMigrasi ? 'data_migrasi' : 'data_aktivasi';
+            const tabLabel = isMigrasi ? 'Migrasi' : 'Baru';
+
+            showLoader(`Membaca Excel (${tabLabel})...`);
+            const reader = new FileReader();
+            reader.onload = async function (evt) {
+                try {
+                    const workbook = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: '' });
+                    let mappedData = [];
+
+                    for (let row of jsonData) {
+                        let getVal = (possibleKeys) => {
+                            let key = Object.keys(row).find(k => possibleKeys.includes(k.toLowerCase().trim()));
+                            return key ? row[key].toString().trim() : '';
+                        };
+                        let cab = getVal(['kodecabang', 'kode cabang', 'kode_cabang']);
+                        if (currentUser.role === 'user') { cab = currentUser.id; }
+                        let cleanRek = getVal(['norek', 'no_rekening', 'no rekening']);
+
+                        if (cleanRek !== '') {
+                            let obj = {
+                                date: importDate,
+                                kode_cabang: cab,
+                                cif: getVal(['cif']),
+                                no_rek: cleanRek,
+                                tipe_produk: getVal(['tipeproduk', 'tipe_produk', 'tipe produk']),
+                                nama: getVal(['nama', 'nama_rekening', 'nama rekening']),
+                                no_hp: getVal(['nohp', 'no hp', 'no_hp']),
+                                user_estim: getVal(['userinput', 'user_input', 'user_estim', 'user estim']),
+                                kendala: ''
+                            };
+                            if (isMigrasi) {
+                                obj.nama_fasilitator = getVal(['namafasilitator', 'nama_fasilitator', 'nama fasilitator', 'fasilitator']);
+                                obj.status = 'Sudah';
+                            } else {
+                                obj.status = 'Belum';
+                            }
+                            mappedData.push(obj);
+                        }
+                    }
+
+                    if (mappedData.length === 0) {
+                        hideLoader();
+                        alert(`Gagal. File Excel kosong atau format header tidak sesuai.\n\nHeader yang dikenali:\nKODECABANG, CIF, NOREK, NAMA, TIPEPRODUK, NOHP, USERINPUT${isMigrasi ? ', NAMAFASILITATOR' : ''}\n\nAlternatif: kode_cabang, cif, no_rekening, nama_rekening, tipe_produk, no_hp, user_estim`);
+                        fileInput.value = '';
+                        return;
+                    }
+
+                    showLoader(`Menyimpan ${mappedData.length} data ke Database (${tabLabel})...`);
+                    const { data: inserted, error } = await db.from(tableName).insert(mappedData).select();
+                    if (error) throw error;
+
+                    const newItems = (inserted || []).map(r => isMigrasi ? mapMigrasiRow(r) : mapAktivasiRow(r));
+                    if (isMigrasi) {
+                        migrasiData = migrasiData.concat(newItems).filter(c => c.id);
+                    } else {
+                        customers = customers.concat(newItems).filter(c => c.id);
+                    }
+
+                    // Kirim notif WA untuk rekening baru
+                    if (!isMigrasi) {
+                        try { await sendWaFonnte(`*Notifikasi JConnect Monitor*\n\nSudah dilakukan import *${mappedData.length} data Rekening Baru* via Input Aktivasi. Silahkan cek aplikasi JConnect Monitor, Terima Kasih 🙏🏻.\n\n_from JCMonitor Apps_`); } catch (_) {}
+                    }
+
+                    hideLoader();
+                    alert(`Import Berhasil! ${mappedData.length} data ${tabLabel} ditambahkan ke tanggal ${formatDate(importDate)}.`);
+                    fileInput.value = '';
+                    renderInputAktivasi(document.getElementById('mainContent'), currentInputTab);
+                } catch (err) {
+                    hideLoader();
+                    alert('Gagal import: ' + err.message);
+                    fileInput.value = '';
+                }
+            };
+            reader.readAsArrayBuffer(file);
         }
 
         // ============================================================

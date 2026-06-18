@@ -10,5 +10,11 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Node
+node_modules/
+package-lock.json
+
+# Excel data
 *.xlsx
 *.xls

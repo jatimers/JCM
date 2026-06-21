@@ -1592,7 +1592,7 @@
                 const rows = (data || []).map((r, i) => {
                     const statusClass = r.status_aktivasi === 'sudah' ? 'text-green-600' : r.status_aktivasi === 'tidak' ? 'text-orange-600' : 'text-red-600';
                     const statusLabel = r.status_aktivasi === 'sudah' ? 'Sudah' : r.status_aktivasi === 'tidak' ? 'Tidak Bisa' : 'Belum';
-                    return `<tr class="border-b">
+                    return `<tr class="border-b rincian-row" data-unit="${r.nama_unit || '-'}">
                         <td class="px-4 py-3 text-xs text-gray-500">${r.tgl ? formatDate(r.tgl) : '-'}</td>
                         <td class="px-4 py-3 text-xs font-bold text-indigo-600">${r.nama_unit || '-'}</td>
                         <td class="px-4 py-3 text-xs text-gray-600">${r.instansi || '-'}</td>
@@ -1604,10 +1604,16 @@
                     </tr>`;
                 }).join('') || '<tr><td colspan="8" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada data</td></tr>';
 
+                // Unit list untuk filter rincian client-side
+                const detailUnits = [...new Set((data || []).map(r => r.nama_unit).filter(Boolean))].sort();
+                const detailUnitOptions = detailUnits.map(u => `<option value="${u}">${u}</option>`).join('');
+
                 resultDiv.innerHTML = `
                     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                        <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-                            <h3 class="font-bold text-gray-700"><i class="fas fa-list text-gray-400 mr-2"></i>Rincian Data (${total} baris${total > 500 ? ', tampil 500 teratas' : ''})</h3>
+                        <div class="p-4 border-b bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <h3 class="font-bold text-gray-700"><i class="fas fa-list text-gray-400 mr-2"></i>Rincian Data (<span id="rincianCount">${total > 500 ? 500 : total}</span> Baris${total > 500 ? ', tampil 500 teratas' : ''})</h3>
+                            <div class="flex items-center space-x-2"><label class="text-xs font-semibold text-gray-500 whitespace-nowrap"><i class="fas fa-filter mr-1"></i>Filter Unit:</label><select id="filterRincian" onchange="filterRincianData(this.value)" class="border border-gray-300 rounded px-2 py-1.5 text-xs outline-none focus:border-bjGreen"><option value="ALL">Semua Unit Kerja</option>${detailUnitOptions}</select></div>
+                        </div>
                             ${total > 500 ? '<span class="text-xs text-orange-500"><i class="fas fa-exclamation-triangle mr-1"></i>Data banyak, persempit filter</span>' : ''}
                         </div>
                         <div class="overflow-x-auto"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Tgl</th><th class="px-4 py-3">Unit Kerja</th><th class="px-4 py-3">Instansi</th><th class="px-4 py-3">No Rek</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Fasilitator</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Keterangan</th></tr></thead>

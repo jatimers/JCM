@@ -1315,10 +1315,10 @@
         async function renderAktivasiAsn(container) {
             showLoader('Memuat Data Aktivasi ASN...');
             try {
-                // Summary cards dari db_aktivasi_asn (1899 baris, kecil)
+                // Summary & filter dari v_aktivasi_asn (view sudah join db_aktivasi_asn + db_rekening + db_cif + users)
                 const [summaryRes, instansiData, unitData] = await Promise.all([
                     db.from('db_aktivasi_asn').select('status_aktivasi'),
-                    db.from('db_cif').select('instansi').not('instansi', 'is', null),
+                    db.from('v_aktivasi_asn').select('instansi').not('instansi', 'is', null),
                     db.from('v_aktivasi_asn').select('nama_unit, kode_cabang_user').not('nama_unit', 'eq', 'Tidak Dikenal')
                 ]);
 
@@ -1328,10 +1328,10 @@
                 const tidak = summary.filter(s => s.status_aktivasi === 'tidak').length;
                 const belum = summary.filter(s => s.status_aktivasi === 'belum').length;
 
-                // Instansi list (dari db_cif)
+                // Instansi list: dari view (hanya instansi yg ada di db_aktivasi_asn, terhubung via db_cif)
                 const instansiList = [...new Set((instansiData.data||[]).map(x => x.instansi).filter(Boolean))].sort();
 
-                // Unit list (dari view, distinct)
+                // Unit list: dari view (db_aktivasi_asn → db_rekening.kode_ext → users.kode_ext → nama_unit)
                 const unitMap = new Map();
                 (unitData.data || []).forEach(u => {
                     if (u.nama_unit && u.nama_unit !== 'Tidak Dikenal' && !unitMap.has(u.kode_cabang_user)) {

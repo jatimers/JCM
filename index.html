@@ -831,6 +831,13 @@
 
         function renderInputAktivasi(container, tab = 'baru') {
             currentInputTab = tab;
+
+            // Tab ASN: UI khusus (search, detail, upload)
+            if (tab === 'asn') {
+                renderAsnInputTab(container);
+                return;
+            }
+
             let sourceData = tab === 'baru' ? customers : migrasiData;
             let displayData = sourceData.filter(c => canViewData(c, currentUser));
             if (currentInputFilterDate) displayData = displayData.filter(c => c.date === currentInputFilterDate);
@@ -904,6 +911,7 @@
                     <div class="flex border-b">
                         <button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'baru')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'baru' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500 hover:bg-gray-50'}">Rekening Baru</button>
                         <button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'migrasi')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'migrasi' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500 hover:bg-gray-50'}">Rekening Lama</button>
+                        ${currentUser.role === 'user' ? `<button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'asn')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'asn' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500 hover:bg-gray-50'}">Rekening ASN</button>` : ''}
                     </div>
                     ${formTambahLama}
                     ${filterUI}
@@ -916,6 +924,224 @@
                         </table>
                     </div>
                 </div>`;
+        }
+
+        // ============================================================
+        // INPUT AKTIVASI — TAB REKENING ASN
+        // ============================================================
+        let asnSearchResults = [];
+        let asnSelectedCif = null;
+
+        async function renderAsnInputTab(container) {
+            container.innerHTML = `
+                <div class="bg-white rounded-xl shadow-sm flex flex-col h-full overflow-hidden">
+                    <div class="flex border-b">
+                        <button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'baru')" class="w-full py-3 px-2 text-sm font-semibold transition text-gray-500 hover:bg-gray-50">Rekening Baru</button>
+                        <button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'migrasi')" class="w-full py-3 px-2 text-sm font-semibold transition text-gray-500 hover:bg-gray-50">Rekening Lama</button>
+                        <button class="w-full py-3 px-2 text-sm font-semibold transition text-bjGreen border-b-2 border-bjGreen bg-bjLight">Rekening ASN</button>
+                    </div>
+                    <div class="p-4 bg-gray-50 border-b">
+                        <div class="bg-white border border-gray-200 rounded p-4 shadow-sm">
+                            <h4 class="text-sm font-bold text-gray-700 mb-3"><i class="fas fa-search text-blue-500 mr-2"></i>Cari Nasabah ASN</h4>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <select id="asnSearchType" class="border rounded px-3 py-2 text-sm">
+                                    <option value="nama">Nama Nasabah</option>
+                                    <option value="no_rek">No Rekening</option>
+                                    <option value="instansi">Instansi</option>
+                                </select>
+                                <input type="text" id="asnSearchInput" onkeyup="if(event.key==='Enter')searchAsnNasabah()" placeholder="Ketik untuk mencari..." class="flex-1 border rounded px-3 py-2 text-sm outline-none focus:border-bjGreen">
+                                <button onclick="searchAsnNasabah()" class="bg-bjGreen text-white px-6 py-2 rounded text-sm hover:bg-bjGreenDark"><i class="fas fa-search mr-1"></i>Cari</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                        <!-- Panel kiri: hasil search -->
+                        <div class="lg:w-1/2 border-r overflow-auto" id="asnSearchResultPanel">
+                            <div class="text-center py-12 text-gray-400"><i class="fas fa-search text-4xl mb-3 block"></i>Hasil pencarian akan tampil di sini</div>
+                        </div>
+                        <!-- Panel kanan: detail -->
+                        <div class="lg:w-1/2 overflow-auto bg-gray-50" id="asnDetailPanel">
+                            <div class="text-center py-12 text-gray-400"><i class="fas fa-info-circle text-4xl mb-3 block"></i>Klik nasabah untuk melihat detail</div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        async function searchAsnNasabah() {
+            const type = document.getElementById('asnSearchType').value;
+            const q = document.getElementById('asnSearchInput').value.trim();
+            if (!q) { alert('Masukkan kata kunci pencarian.'); return; }
+
+            const panel = document.getElementById('asnSearchResultPanel');
+            panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>Mencari...</div>';
+
+            try {
+                let query = db.from('v_aktivasi_asn').select('cif, nama_cif, hp_cif, instansi, no_rek, nama_rek, alamat, status_aktivasi, ket_aktivasi, nama_unit');
+                if (type === 'nama') query = query.ilike('nama_cif', '%' + q + '%');
+                else if (type === 'no_rek') query = query.ilike('no_rek', '%' + q + '%');
+                else if (type === 'instansi') query = query.ilike('instansi', '%' + q + '%');
+                query = query.limit(50);
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                asnSearchResults = data || [];
+                if (asnSearchResults.length === 0) {
+                    panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ditemukan</div>';
+                } else {
+                    panel.innerHTML = `<div class="text-xs text-gray-500 p-3 border-b">Ditemukan ${asnSearchResults.length} data</div>` +
+                        asnSearchResults.map((r, i) => `
+                        <div class="p-3 border-b hover:bg-blue-50 cursor-pointer transition" onclick="showAsnDetail('${r.cif}', ${i})" id="asnRow_${i}">
+                            <div class="font-semibold text-gray-800">${r.nama_cif || r.nama_rek || '-'}</div>
+                            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
+                                <span><i class="fas fa-hashtag mr-1"></i>${r.cif}</span>
+                                <span><i class="fas fa-credit-card mr-1"></i>${r.no_rek || '-'}</span>
+                                <span class="badge-status ${r.status_aktivasi==='sudah'?'text-green-600':r.status_aktivasi==='tidak'?'text-red-600':'text-yellow-600'}"><i class="fas fa-circle mr-1 text-[6px] align-middle"></i>${r.status_aktivasi==='sudah'?'Sudah':r.status_aktivasi==='tidak'?'Tidak Bisa':'Belum'}</span>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-0.5">${r.instansi || '-'} | ${r.nama_unit || '-'}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) { panel.innerHTML = '<div class="text-center py-8 text-red-500">Gagal: ' + err.message + '</div>'; }
+        }
+
+        async function showAsnDetail(cif, index) {
+            asnSelectedCif = cif;
+            // Highlight selected row
+            document.querySelectorAll('[id^="asnRow_"]').forEach(el => el.classList.remove('bg-blue-100', 'border-l-4', 'border-blue-500'));
+            const row = document.getElementById('asnRow_' + index);
+            if (row) row.classList.add('bg-blue-100', 'border-l-4', 'border-blue-500');
+
+            const panel = document.getElementById('asnDetailPanel');
+            panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>Memuat detail...</div>';
+
+            try {
+                // Ambil data dari search results
+                const base = asnSearchResults[index];
+                // Ambil semua norek untuk CIF ini
+                const { data: allRek } = await db.from('db_rekening').select('no_rek, nama_rek, kode_ext, kode_cabang_rek').eq('cif', cif).limit(20);
+
+                const rekList = (allRek || []).map(r => r.no_rek).filter(Boolean);
+                const allNorek = rekList.length > 0 ? rekList.join(', ') : (base.no_rek || '-');
+
+                // Ambil data aktivasi yang sudah ada
+                const { data: existing } = await db.from('db_aktivasi_asn').select('*').eq('cif', cif).limit(1);
+                const existingData = (existing && existing.length > 0) ? existing[0] : null;
+
+                const currentStatus = existingData ? (existingData.status_aktivasi || 'belum') : 'belum';
+                const currentKet = existingData ? (existingData.ket_aktivasi || '') : '';
+                const currentFoto = existingData ? (existingData.foto_url || '') : '';
+
+                panel.innerHTML = `
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg text-gray-800 mb-3">${base.nama_cif || base.nama_rek || '-'}</h3>
+                        <div class="space-y-2 text-sm mb-4">
+                            <div class="flex"><span class="w-28 text-gray-500 shrink-0">Alamat</span><span class="text-gray-700">: ${base.alamat || '-'}</span></div>
+                            <div class="flex"><span class="w-28 text-gray-500 shrink-0">No HP</span><span class="text-gray-700">: ${base.hp_cif || '-'}</span></div>
+                            <div class="flex"><span class="w-28 text-gray-500 shrink-0">Instansi</span><span class="text-gray-700">: ${base.instansi || '-'}</span></div>
+                            <div class="flex"><span class="w-28 text-gray-500 shrink-0">Unit Kerja</span><span class="text-gray-700">: ${base.nama_unit || '-'}</span></div>
+                            <div class="flex"><span class="w-28 text-gray-500 shrink-0">CIF</span><span class="text-gray-700 font-mono">: ${cif}</span></div>
+                            <div class="flex"><span class="w-28 text-gray-500 shrink-0">No Rekening</span><span class="text-gray-700 font-mono text-xs">: ${allNorek}</span></div>
+                        </div>
+
+                        <div class="border-t pt-4">
+                            <label class="block text-sm font-semibold mb-2">Status Aktivasi</label>
+                            <select id="asnDetailStatus" onchange="handleAsnStatusChange()" class="w-full border rounded px-3 py-2 text-sm mb-3">
+                                <option value="belum" ${currentStatus==='belum'?'selected':''}>Belum aktivasi</option>
+                                <option value="sudah" ${currentStatus==='sudah'?'selected':''}>Sudah aktivasi</option>
+                                <option value="tidak" ${currentStatus==='tidak'?'selected':''}>Tidak dapat diaktivasi</option>
+                            </select>
+
+                            <div id="asnKetWrapper" class="${currentStatus==='tidak'?'':'hide'} mb-3">
+                                <label class="block text-sm font-semibold mb-1">Keterangan / Kendala</label>
+                                <textarea id="asnDetailKet" rows="2" class="w-full border rounded px-3 py-2 text-sm" placeholder="Alasan tidak dapat diaktivasi...">${currentKet}</textarea>
+                            </div>
+
+                            <div id="asnFotoWrapper" class="${currentStatus==='tidak'?'':'hide'} mb-3">
+                                <label class="block text-sm font-semibold mb-1">Upload Bukti Foto</label>
+                                <div class="flex gap-2 mb-2">
+                                    <button onclick="document.getElementById('asnCameraInput').click()" class="bg-blue-500 text-white px-3 py-2 rounded text-xs hover:bg-blue-600"><i class="fas fa-camera mr-1"></i>Kamera</button>
+                                    <button onclick="document.getElementById('asnFileInput').click()" class="bg-gray-500 text-white px-3 py-2 rounded text-xs hover:bg-gray-600"><i class="fas fa-image mr-1"></i>Galeri</button>
+                                    <input type="file" id="asnCameraInput" accept="image/*" capture="camera" onchange="handleAsnPhotoUpload(this)" class="hidden">
+                                    <input type="file" id="asnFileInput" accept="image/*" onchange="handleAsnPhotoUpload(this)" class="hidden">
+                                </div>
+                                <div id="asnFotoPreview" class="mt-2">${currentFoto ? `<img src="${currentFoto}" class="max-w-[200px] rounded shadow" /><br><a href="${currentFoto}" target="_blank" class="text-xs text-blue-500">Lihat full</a>` : '<span class="text-xs text-gray-400">Belum ada foto</span>'}</div>
+                                <div id="asnUploadProgress" class="hide mt-2 text-xs text-blue-500"><i class="fas fa-spinner fa-spin mr-1"></i>Mengupload...</div>
+                            </div>
+
+                            <button onclick="saveAsnStatus('${cif}')" class="w-full bg-bjGreen text-white py-2.5 rounded text-sm font-semibold hover:bg-bjGreenDark mt-2"><i class="fas fa-save mr-2"></i>Simpan Status Aktivasi</button>
+                        </div>
+                    </div>`;
+            } catch (err) { panel.innerHTML = '<div class="text-center py-8 text-red-500">Gagal: ' + err.message + '</div>'; }
+        }
+
+        function handleAsnStatusChange() {
+            const status = document.getElementById('asnDetailStatus').value;
+            document.getElementById('asnKetWrapper').classList.toggle('hide', status !== 'tidak');
+            document.getElementById('asnFotoWrapper').classList.toggle('hide', status !== 'tidak');
+        }
+
+        async function handleAsnPhotoUpload(input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            if (file.size > 5 * 1024 * 1024) { alert('Foto maksimal 5MB.'); return; }
+
+            const progressEl = document.getElementById('asnUploadProgress');
+            progressEl.classList.remove('hide');
+
+            try {
+                const fileName = 'asn_' + asnSelectedCif + '_' + Date.now() + '.' + file.name.split('.').pop();
+                const { error } = await db.storage.from('bukti-aktivasi').upload(fileName, file, { cacheControl: '3600', upsert: false });
+                if (error) throw error;
+
+                const { data: urlData } = db.storage.from('bukti-aktivasi').getPublicUrl(fileName);
+                const fotoUrl = urlData.publicUrl;
+
+                // Update preview
+                document.getElementById('asnFotoPreview').innerHTML = `<img src="${fotoUrl}" class="max-w-[200px] rounded shadow" /><br><a href="${fotoUrl}" target="_blank" class="text-xs text-blue-500">Lihat full</a>`;
+                // Simpan URL sementara
+                document.getElementById('asnFotoPreview').dataset.fotoUrl = fotoUrl;
+                showToast('Foto berhasil diupload!');
+            } catch (err) {
+                alert('Gagal upload foto: ' + err.message);
+            }
+            progressEl.classList.add('hide');
+            input.value = '';
+        }
+
+        async function saveAsnStatus(cif) {
+            const status = document.getElementById('asnDetailStatus').value;
+            const ket = document.getElementById('asnDetailKet')?.value || '';
+            const fotoPreview = document.getElementById('asnFotoPreview');
+            const fotoUrl = (status === 'tidak' && fotoPreview && fotoPreview.dataset.fotoUrl) ? fotoPreview.dataset.fotoUrl : '';
+
+            showLoader('Menyimpan...');
+            try {
+                // Cek apakah sudah ada data untuk CIF ini
+                const { data: existing } = await db.from('db_aktivasi_asn').select('id').eq('cif', cif).limit(1);
+                const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '' };
+                if (fotoUrl) payload.foto_url = fotoUrl;
+
+                if (existing && existing.length > 0) {
+                    const { error } = await db.from('db_aktivasi_asn').update(payload).eq('cif', cif);
+                    if (error) throw error;
+                } else {
+                    const { error } = await db.from('db_aktivasi_asn').insert({ cif, ...payload });
+                    if (error) throw error;
+                }
+
+                hideLoader();
+                showToast('Status aktivasi tersimpan!');
+
+                // Update search result badge
+                const idx = asnSearchResults.findIndex(r => r.cif === cif);
+                if (idx >= 0) {
+                    asnSearchResults[idx].status_aktivasi = status;
+                    asnSearchResults[idx].ket_aktivasi = status === 'tidak' ? ket : '';
+                }
+                // Refresh detail
+                if (idx >= 0) showAsnDetail(cif, idx);
+            } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
         }
 
         async function autoSaveField(id, field, value, isMigrasi) {

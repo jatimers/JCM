@@ -1612,7 +1612,7 @@
                     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                         <div class="p-4 border-b bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <h3 class="font-bold text-gray-700"><i class="fas fa-list text-gray-400 mr-2"></i>Rincian Data (<span id="rincianCount">${total > 500 ? 500 : total}</span> Baris${total > 500 ? ', tampil 500 teratas' : ''})</h3>
-                            <div class="flex items-center space-x-2"><label class="text-xs font-semibold text-gray-500 whitespace-nowrap"><i class="fas fa-filter mr-1"></i>Filter Unit:</label><select onchange="filterRincianDataAsn(this.value)" class="border border-gray-300 rounded px-2 py-1.5 text-xs outline-none focus:border-bjGreen"><option value="ALL">Semua Unit Kerja</option>${detailUnitOptions}</select></div>
+                            <div class="flex items-center space-x-2"><label class="text-xs font-semibold text-gray-500 whitespace-nowrap"><i class="fas fa-filter mr-1"></i>Filter Unit:</label><select onchange="filterRincianDataAsn(this)" class="border border-gray-300 rounded px-2 py-1.5 text-xs outline-none focus:border-bjGreen"><option value="ALL">Semua Unit Kerja</option>${detailUnitOptions}</select></div>
                         </div>
                             ${total > 500 ? '<span class="text-xs text-orange-500"><i class="fas fa-exclamation-triangle mr-1"></i>Data banyak, persempit filter</span>' : ''}
                         </div>
@@ -1635,8 +1635,10 @@
             if (countSpan) countSpan.innerText = visibleCount;
         }
 
-        function filterRincianDataAsn(unit) {
-            const container = document.getElementById('asnLaporanResult');
+        function filterRincianDataAsn(selectEl) {
+            const unit = selectEl.value;
+            // Cari container asnLaporanResult (naik dari select)
+            const container = selectEl.closest('#asnLaporanResult') || document.getElementById('asnLaporanResult');
             if (!container) return;
             const rows = container.querySelectorAll('.rincian-row');
             let visibleCount = 0;

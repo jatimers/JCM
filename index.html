@@ -1707,7 +1707,7 @@
                     const statusLabel = r.status_aktivasi === 'sudah' ? 'Sudah' :
                                        r.status_aktivasi === 'tidak' ? 'Tidak Bisa' : 'Belum';
                     const rowNum = start + i + 1;
-                    return `<tr class="border-b hover:bg-gray-50">
+                    return `<tr class="border-b hover:bg-blue-50 cursor-pointer transition" onclick="showAsnTableDetail('${r.cif}')">
                         <td class="px-4 py-2 text-center text-xs text-gray-500">${rowNum}</td>
                         <td class="px-4 py-2 font-mono text-xs">${r.no_rek || r.cif || '-'}</td>
                         <td class="px-4 py-2"><div class="font-semibold text-gray-800">${r.nama_cif || r.nama_rek || '-'}</div><div class="text-xs text-gray-500">${r.hp_cif || '-'}</div></td>
@@ -1742,6 +1742,67 @@
             aktivasiAsnState.instansi = '';
             aktivasiAsnState.unit = '';
             loadAktivasiAsnPage(0);
+        }
+
+        async function showAsnTableDetail(cif) {
+            showLoader('Memuat detail...');
+            try {
+                // Ambil detail dari view + semua norek dari db_rekening
+                const [{ data: viewData }, { data: rekData }] = await Promise.all([
+                    db.from('v_aktivasi_asn').select('*').eq('cif', cif).limit(1),
+                    db.from('db_rekening').select('no_rek, nama_rek').eq('cif', cif).order('no_rek').limit(30)
+                ]);
+
+                const r = (viewData && viewData.length > 0) ? viewData[0] : null;
+                if (!r) { hideLoader(); alert('Data tidak ditemukan.'); return; }
+
+                const allNorek = (rekData || []).map(x => x.no_rek).filter(Boolean);
+                const norekList = allNorek.length > 0 ? allNorek.join(', ') : (r.no_rek || '-');
+                const fotoUrl = r.foto_url || '';
+
+                hideLoader();
+
+                // Tampilkan modal
+                const modal = document.createElement('div');
+                modal.id = 'asnDetailModal';
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4';
+                modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+
+                const statusBadge = r.status_aktivasi === 'sudah' ? '<span class="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">Sudah</span>' :
+                                   r.status_aktivasi === 'tidak' ? '<span class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">Tidak Bisa</span>' :
+                                   '<span class="px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800">Belum</span>';
+
+                modal.innerHTML = `
+                    <div class="bg-white rounded-t-xl sm:rounded-xl shadow-xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+                        <div class="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center rounded-t-xl z-10">
+                            <h3 class="font-bold text-gray-800 text-sm sm:text-base"><i class="fas fa-id-card text-bjGreen mr-2"></i>Detail ASN</h3>
+                            <button onclick="document.getElementById('asnDetailModal').remove()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div>
+                                <h4 class="font-bold text-base text-gray-800">${r.nama_cif || r.nama_rek || '-'}</h4>
+                                <p class="text-xs text-gray-500 font-mono mt-0.5">CIF: ${cif}</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Alamat</span><span class="text-gray-700 text-xs">: ${r.alamat || '-'}</span></div>
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">No HP</span><span class="text-gray-700 text-xs font-semibold">: <a href="tel:${r.hp_cif}" class="text-blue-600">${r.hp_cif || '-'}</a></span></div>
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Instansi</span><span class="text-gray-700 text-xs">: ${r.instansi || '-'}</span></div>
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Unit Kerja</span><span class="text-indigo-600 text-xs font-semibold">: ${r.nama_unit || '-'}</span></div>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-xs text-gray-500">No Rekening</span>
+                                <p class="text-xs font-mono text-gray-700 mt-1 break-all">${norekList}</p>
+                            </div>
+                            <div class="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                                <span class="text-xs text-gray-500">Status</span>
+                                ${statusBadge}
+                            </div>
+                            ${r.ket_aktivasi ? `<div class="bg-gray-50 rounded-lg p-3"><span class="text-xs text-gray-500">Keterangan</span><p class="text-xs text-gray-700 mt-1">${r.ket_aktivasi}</p></div>` : ''}
+                            ${fotoUrl ? `<div class="bg-gray-50 rounded-lg p-3"><span class="text-xs text-gray-500 mb-2 block">Foto Bukti</span><img src="${fotoUrl}" class="w-full rounded shadow max-h-64 object-contain bg-black" onerror="this.style.display='none'" /><a href="${fotoUrl}" target="_blank" class="text-xs text-blue-500 mt-2 inline-block">🔗 Buka full size</a></div>` : ''}
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+            } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
         }
 
         // ============================================================

@@ -1039,6 +1039,7 @@
                             <button onclick="document.getElementById('asnDetailPanel').innerHTML='<div class=\\'text-center py-10 text-gray-400 text-sm\\'><i class=\\'fas fa-hand-pointer text-3xl mb-2 block\\'></i>Klik nasabah untuk lihat detail</div>'" class="text-gray-400 hover:text-gray-600 sm:hidden"><i class="fas fa-times"></i></button>
                         </div>
                         <div class="space-y-1.5 text-xs sm:text-sm mb-4 bg-white rounded p-3 border">
+                            <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">Fasilitator</span><span class="text-gray-700 font-semibold ml-1">${currentUser.namaUser || currentUser.id}</span></div>
                             <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">Alamat</span><span class="text-gray-700 ml-1">${base.alamat || '-'}</span></div>
                             <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">No HP</span><span class="text-gray-700 font-semibold ml-1"><a href="tel:${base.hp_cif}" class="text-blue-600">${base.hp_cif || '-'}</a></span></div>
                             <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">Instansi</span><span class="text-gray-700 ml-1">${base.instansi || '-'}</span></div>
@@ -1165,7 +1166,7 @@
 
             try {
                 const { data: existing } = await db.from('db_aktivasi_asn').select('id').eq('cif', cif).limit(1);
-                const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '', tgl: getLocalYMD() };
+                const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '', tgl: getLocalYMD(), fasilitator: currentUser.id };
                 if (fotoUrl) payload.foto_url = fotoUrl;
                 if (status !== 'tidak') { payload.ket_aktivasi = ''; payload.foto_url = null; }
 
@@ -1173,7 +1174,7 @@
                     const { error } = await db.from('db_aktivasi_asn').update(payload).eq('cif', cif);
                     if (error) throw error;
                 } else {
-                    const { error } = await db.from('db_aktivasi_asn').insert({ cif, ...payload });
+                    const { error } = await db.from('db_aktivasi_asn').insert({ cif, fasilitator: currentUser.id, ...payload });
                     if (error) throw error;
                 }
 
@@ -1597,10 +1598,11 @@
                         <td class="px-4 py-3 text-xs text-gray-600">${r.instansi || '-'}</td>
                         <td class="px-4 py-3 font-mono text-xs">${r.no_rek || r.cif || '-'}</td>
                         <td class="px-4 py-3"><div class="font-semibold text-gray-800">${r.nama_cif || r.nama_rek || '-'}</div><div class="text-xs text-gray-500">${r.hp_cif || '-'}</div></td>
+                        <td class="px-4 py-3 text-xs text-gray-600">${r.nama_fasilitator || '-'}</td>
                         <td class="px-4 py-3 font-semibold ${statusClass}">${statusLabel}</td>
                         <td class="px-4 py-3 text-xs text-gray-600 max-w-[150px] truncate" title="${r.ket_aktivasi || ''}">${r.ket_aktivasi || '-'}</td>
                     </tr>`;
-                }).join('') || '<tr><td colspan="7" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada data</td></tr>';
+                }).join('') || '<tr><td colspan="8" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada data</td></tr>';
 
                 resultDiv.innerHTML = `
                     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -1608,7 +1610,7 @@
                             <h3 class="font-bold text-gray-700"><i class="fas fa-list text-gray-400 mr-2"></i>Rincian Data (${total} baris${total > 500 ? ', tampil 500 teratas' : ''})</h3>
                             ${total > 500 ? '<span class="text-xs text-orange-500"><i class="fas fa-exclamation-triangle mr-1"></i>Data banyak, persempit filter</span>' : ''}
                         </div>
-                        <div class="overflow-x-auto"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Tgl</th><th class="px-4 py-3">Unit Kerja</th><th class="px-4 py-3">Instansi</th><th class="px-4 py-3">No Rek</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Keterangan</th></tr></thead>
+                        <div class="overflow-x-auto"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Tgl</th><th class="px-4 py-3">Unit Kerja</th><th class="px-4 py-3">Instansi</th><th class="px-4 py-3">No Rek</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Fasilitator</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Keterangan</th></tr></thead>
                         <tbody>${rows}</tbody></table></div>
                     </div>`;
             } catch (err) {
@@ -1910,6 +1912,7 @@
                                 <p class="text-xs text-gray-500 font-mono mt-0.5">CIF: ${cif}</p>
                             </div>
                             <div class="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Fasilitator</span><span class="text-gray-700 text-xs font-semibold">: ${r.nama_fasilitator || '-'}</span></div>
                                 <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Alamat</span><span class="text-gray-700 text-xs">: ${r.alamat || '-'}</span></div>
                                 <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">No HP</span><span class="text-gray-700 text-xs font-semibold">: <a href="tel:${r.hp_cif}" class="text-blue-600">${r.hp_cif || '-'}</a></span></div>
                                 <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Instansi</span><span class="text-gray-700 text-xs">: ${r.instansi || '-'}</span></div>

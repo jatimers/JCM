@@ -1,12 +1,12 @@
 /**
- * auto_upload.js — Auto Upload Data Nasabah (Rekening Baru)
+ * autoupload.js — Auto Upload Data Nasabah (Rekening Baru)
  *
  * Membaca file Excel BukaRek-ddmmyyyy.xlsx dari folder D:\Project\JCM,
  * lalu insert ke tabel data_aktivasi di Supabase.
  *
  * Dijalankan oleh Windows Task Scheduler setiap hari jam 15:30.
  *
- * Usage: node auto_upload.js
+ * Usage: node autoupload.js
  */
 
 const { createClient } = require('@supabase/supabase-js');
@@ -90,7 +90,7 @@ async function main() {
     if (!fs.existsSync(filePath)) {
         log(`ERROR: File "${fileName}" tidak ditemukan.`);
         if (!cliFile) {
-            log('Tips: gunakan "node auto_upload.js <namafile>" untuk test manual.');
+            log('Tips: gunakan "node autoupload.js <namafile>" untuk test manual.');
         }
         log('=== AUTO UPLOAD NASABAH END (FILE NOT FOUND) ===');
         process.exit(0);

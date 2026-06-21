@@ -414,6 +414,7 @@
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
                 { id: 'upload_data', icon: 'fa-upload', label: 'Upload Data Nasabah' },
                 { id: 'edit_nasabah', icon: 'fa-users', label: 'Data Nasabah' },
+                { id: 'aktivasi_asn', icon: 'fa-id-card', label: 'Aktivasi ASN' },
                 { id: 'manage_products', icon: 'fa-box', label: 'Kelola Produk' },
                 { id: 'manage_users', icon: 'fa-user-cog', label: 'Kelola User' },
                 { id: 'laporan_admin', icon: 'fa-file-alt', label: 'Laporan Aktivasi' },
@@ -423,17 +424,20 @@
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
                 { id: 'upload_data', icon: 'fa-upload', label: 'Upload Data Nasabah' },
                 { id: 'edit_nasabah', icon: 'fa-users', label: 'Data Nasabah' },
+                { id: 'aktivasi_asn', icon: 'fa-id-card', label: 'Aktivasi ASN' },
                 { id: 'manage_products', icon: 'fa-box', label: 'Kelola Produk' },
                 { id: 'laporan_admin', icon: 'fa-file-alt', label: 'Laporan Aktivasi' },
                 { id: 'pengaturan_wa', icon: 'fa-cogs', label: 'Pengaturan WA' }
             ],
             supervisor: [
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
+                { id: 'aktivasi_asn', icon: 'fa-id-card', label: 'Aktivasi ASN' },
                 { id: 'laporan_admin', icon: 'fa-file-alt', label: 'Laporan Aktivasi' }
             ],
             user: [
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard Unit' },
                 { id: 'input_aktivasi', icon: 'fa-edit', label: 'Input Aktivasi' },
+                { id: 'aktivasi_asn', icon: 'fa-id-card', label: 'Aktivasi ASN' },
                 { id: 'laporan_user', icon: 'fa-file-alt', label: 'Laporan Unit' }
             ]
         };
@@ -466,6 +470,7 @@
                 case 'manage_products': renderManageProducts(content); break;
                 case 'manage_users': renderManageUsers(content); break;
                 case 'laporan_admin': renderLaporanAdmin(content, currentUser.role); break;
+                case 'aktivasi_asn': renderAktivasiAsn(content); break;
                 case 'input_aktivasi': renderInputAktivasi(content, 'baru'); break;
                 case 'laporan_user': renderLaporanUser(content); break;
                 case 'pengaturan_wa': renderPengaturanWA(content); break;
@@ -1300,6 +1305,172 @@
                 hideLoader();
                 if (currentView === 'manage_users') document.getElementById('userTableBody').innerHTML = generateUserTableRows();
             } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
+        }
+
+        // ============================================================
+        // AKTIVASI ASN
+        // ============================================================
+        let aktivasiAsnState = { page: 0, pageSize: 50, total: 0, instansi: '', unit: '', data: [] };
+
+        async function renderAktivasiAsn(container) {
+            showLoader('Memuat Data Aktivasi ASN...');
+            try {
+                // Load filter options from smaller source tables
+                const [instansiData, unitList, summary] = await Promise.all([
+                    db.from('db_cif').select('instansi').not('instansi', 'is', null).then(r => [...new Set((r.data||[]).map(x=>x.instansi).filter(Boolean))].sort()),
+                    db.from('users').select('kode_cabang, nama_unit').not('kode_cabang', 'is', null).then(r => r.data || []),
+                    db.from('v_aktivasi_asn').select('status_aktivasi').then(r => r.data || [])
+                ]);
+
+                const totalAsn = summary.length;
+                const sudah = summary.filter(s => s.status_aktivasi === 'sudah').length;
+                const tidak = summary.filter(s => s.status_aktivasi === 'tidak').length;
+                const belum = summary.filter(s => s.status_aktivasi === 'belum').length;
+
+                // Map unit list
+                const unitMap = {};
+                unitList.forEach(u => { unitMap[u.kode_cabang] = u.nama_unit || u.kode_cabang; });
+
+                aktivasiAsnState.instansiList = instansiData;
+                aktivasiAsnState.unitList = unitList;
+
+                hideLoader();
+                container.innerHTML = `
+                    <div id="aktivasiAsnContent">
+                        <!-- Cards -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+                                <div class="text-sm text-gray-500 uppercase font-semibold">Sudah Aktivasi</div>
+                                <div class="text-3xl font-bold text-green-600 mt-1">${sudah}</div>
+                                <div class="text-xs text-gray-400 mt-1">${totalAsn ? Math.round(sudah/totalAsn*100) : 0}% dari ${totalAsn} ASN</div>
+                            </div>
+                            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-orange-500">
+                                <div class="text-sm text-gray-500 uppercase font-semibold">Belum Aktivasi</div>
+                                <div class="text-3xl font-bold text-orange-600 mt-1">${belum}</div>
+                                <div class="text-xs text-gray-400 mt-1">${totalAsn ? Math.round(belum/totalAsn*100) : 0}% dari ${totalAsn} ASN</div>
+                            </div>
+                            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
+                                <div class="text-sm text-gray-500 uppercase font-semibold">Tidak Bisa Aktivasi</div>
+                                <div class="text-3xl font-bold text-red-600 mt-1">${tidak}</div>
+                                <div class="text-xs text-gray-400 mt-1">${totalAsn ? Math.round(tidak/totalAsn*100) : 0}% dari ${totalAsn} ASN</div>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="bg-white rounded-xl shadow-sm p-4 mb-4 flex flex-wrap items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <label class="text-sm font-semibold text-gray-600"><i class="fas fa-building mr-1"></i>Instansi</label>
+                                <select id="filterInstansiAsn" onchange="applyFilterAktivasiAsn()" class="border rounded px-3 py-2 text-sm min-w-[200px]">
+                                    <option value="">Semua Instansi</option>
+                                    ${instansiData.map(i => `<option value="${i}">${i}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-sm font-semibold text-gray-600"><i class="fas fa-sitemap mr-1"></i>Unit Kerja</label>
+                                <select id="filterUnitAsn" onchange="applyFilterAktivasiAsn()" class="border rounded px-3 py-2 text-sm min-w-[180px]">
+                                    <option value="">Semua Unit</option>
+                                    ${unitList.map(u => `<option value="${u.kode_cabang}">${u.nama_unit || u.kode_cabang}</option>`).join('')}
+                                </select>
+                            </div>
+                            <button onclick="resetFilterAktivasiAsn()" class="text-xs bg-gray-200 px-3 py-2 rounded hover:bg-gray-300 font-medium"><i class="fas fa-times mr-1"></i>Reset</button>
+                            <span class="text-xs text-gray-400 ml-auto" id="asnPageInfo">Memuat...</span>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-3 w-12">No</th>
+                                            <th class="px-4 py-3">NO Rekening</th>
+                                            <th class="px-4 py-3">Nama & HP</th>
+                                            <th class="px-4 py-3">Instansi</th>
+                                            <th class="px-4 py-3">Unit Kerja</th>
+                                            <th class="px-4 py-3 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="asnTableBody">
+                                        <tr><td colspan="6" class="text-center py-8 text-gray-400">Memuat data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Pagination -->
+                            <div id="asnPagination" class="px-4 py-3 border-t bg-gray-50 flex justify-between items-center"></div>
+                        </div>
+                    </div>`;
+
+                // Load data
+                await loadAktivasiAsnPage(0);
+            } catch (err) { hideLoader(); alert('Gagal memuat data: ' + err.message); }
+        }
+
+        async function loadAktivasiAsnPage(page) {
+            aktivasiAsnState.page = page;
+            const ps = aktivasiAsnState.pageSize;
+            const start = page * ps;
+            const end = start + ps - 1;
+
+            let query = db.from('v_aktivasi_asn').select('*', { count: 'exact' });
+            if (aktivasiAsnState.instansi) query = query.eq('instansi', aktivasiAsnState.instansi);
+            if (aktivasiAsnState.unit) query = query.eq('kode_cabang_user', aktivasiAsnState.unit);
+
+            const { data, count, error } = await query.range(start, end).order('cif');
+            if (error) { alert('Gagal: ' + error.message); return; }
+
+            aktivasiAsnState.data = data || [];
+            aktivasiAsnState.total = count || 0;
+
+            // Render table
+            const tbody = document.getElementById('asnTableBody');
+            if (!tbody) return;
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada data</td></tr>';
+            } else {
+                tbody.innerHTML = data.map((r, i) => {
+                    const statusClass = r.status_aktivasi === 'sudah' ? 'bg-green-100 text-green-800' :
+                                       r.status_aktivasi === 'tidak' ? 'bg-red-100 text-red-800' :
+                                       'bg-yellow-100 text-yellow-800';
+                    const statusLabel = r.status_aktivasi === 'sudah' ? 'Sudah' :
+                                       r.status_aktivasi === 'tidak' ? 'Tidak Bisa' : 'Belum';
+                    const rowNum = start + i + 1;
+                    return `<tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-2 text-center text-xs text-gray-500">${rowNum}</td>
+                        <td class="px-4 py-2 font-mono text-xs">${r.no_rek || r.cif || '-'}</td>
+                        <td class="px-4 py-2"><div class="font-semibold text-gray-800">${r.nama_cif || r.nama_rek || '-'}</div><div class="text-xs text-gray-500">${r.hp_cif || '-'}</div></td>
+                        <td class="px-4 py-2 text-xs text-gray-600 max-w-[200px] truncate" title="${r.instansi || ''}">${r.instansi || '-'}</td>
+                        <td class="px-4 py-2 text-xs font-semibold text-indigo-600">${r.nama_unit || '-'}</td>
+                        <td class="px-4 py-2 text-center"><span class="px-2 py-1 text-xs font-semibold rounded ${statusClass}">${statusLabel}</span></td>
+                    </tr>`;
+                }).join('');
+            }
+
+            // Pagination
+            const totalPages = Math.ceil(aktivasiAsnState.total / ps);
+            document.getElementById('asnPageInfo').innerText = `${aktivasiAsnState.total} data | Halaman ${page+1}/${Math.max(1,totalPages)}`;
+            document.getElementById('asnPagination').innerHTML = `
+                <button onclick="loadAktivasiAsnPage(0)" ${page===0?'disabled':''} class="px-3 py-1 text-sm rounded border ${page===0?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-double-left"></i></button>
+                <button onclick="loadAktivasiAsnPage(${page-1})" ${page===0?'disabled':''} class="px-3 py-1 text-sm rounded border ${page===0?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-left"></i></button>
+                <span class="text-xs text-gray-600 px-3">Hal ${page+1} / ${Math.max(1,totalPages)}</span>
+                <button onclick="loadAktivasiAsnPage(${page+1})" ${page>=totalPages-1?'disabled':''} class="px-3 py-1 text-sm rounded border ${page>=totalPages-1?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-right"></i></button>
+                <button onclick="loadAktivasiAsnPage(${totalPages-1})" ${page>=totalPages-1?'disabled':''} class="px-3 py-1 text-sm rounded border ${page>=totalPages-1?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-double-right"></i></button>`;
+        }
+
+        function applyFilterAktivasiAsn() {
+            aktivasiAsnState.instansi = document.getElementById('filterInstansiAsn')?.value || '';
+            aktivasiAsnState.unit = document.getElementById('filterUnitAsn')?.value || '';
+            loadAktivasiAsnPage(0);
+        }
+
+        function resetFilterAktivasiAsn() {
+            const fi = document.getElementById('filterInstansiAsn');
+            const fu = document.getElementById('filterUnitAsn');
+            if (fi) fi.value = '';
+            if (fu) fu.value = '';
+            aktivasiAsnState.instansi = '';
+            aktivasiAsnState.unit = '';
+            loadAktivasiAsnPage(0);
         }
 
         // ============================================================

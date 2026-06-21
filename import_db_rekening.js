@@ -1,16 +1,17 @@
 /**
  * import_db_rekening.js — Import CSV ke tabel db_rekening di Supabase
  *
- * Membaca file CSV (dari Excel yang di-save as CSV), mapping kolom,
- * lalu insert ke tabel db_rekening.
+ * Membaca file CSV, mapping kolom, lalu insert ke tabel db_rekening.
  *
  * Usage:
- *   node import_db_rekening.js <file.csv>
- *   node import_db_rekening.js db_rekening.csv
+ *   node import_db_rekening.js <file.csv>              # CSV dengan header
+ *   node import_db_rekening.js <file.csv> --no-header  # CSV tanpa header
  *
- * Format CSV yang dikenali (header):
+ * Format CSV (dengan header):
  *   NO_REK, NAMA_REK, CIF, KODE_CABANG_REK, TIPE_REK, TGL_BUKA_REK, KODE_EXT, KODE_FO
- *   atau: no_rek, nama_rek, cif, kode_cabang_rek, tipe_rek, tgl_buka_rek, kode_ext, kode_fo
+ *
+ * Format CSV (tanpa header — gunakan --no-header):
+ *   Urutan kolom: no_rek, nama_rek, cif, kode_cabang_rek, tipe_rek, tgl_buka_rek, kode_ext, kode_fo
  */
 
 const { createClient } = require('@supabase/supabase-js');
@@ -89,9 +90,10 @@ async function main() {
     }
 
     const csvFile = process.argv[2];
+    const noHeader = process.argv.includes('--no-header');
     if (!csvFile) {
         log('ERROR: Harap sertakan nama file CSV.');
-        log('Usage: node import_db_rekening.js <file.csv>');
+        log('Usage: node import_db_rekening.js <file.csv> [--no-header]');
         process.exit(1);
     }
 
@@ -106,33 +108,43 @@ async function main() {
     const content = fs.readFileSync(filePath, 'utf-8').replace(/^﻿/, '');
     const lines = content.split(/\r?\n/).filter(l => l.trim());
 
-    if (lines.length < 2) {
-        log('ERROR: CSV kosong atau hanya ada header.');
+    const minLines = noHeader ? 1 : 2;
+    if (lines.length < minLines) {
+        log('ERROR: CSV kosong' + (noHeader ? '.' : ' atau hanya ada header.'));
         process.exit(1);
     }
 
     // 3. Parse header
-    const rawHeaders = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-    const headers = rawHeaders.map(normalizeHeader);
-    log(`Header CSV: ${headers.join(', ')}`);
+    let colIndex = {};
+    let startLine = 1;
 
-    // Cek mapping
-    const colIndex = {};
-    for (let i = 0; i < headers.length; i++) {
-        const h = headers[i];
-        if (COLUMN_MAP[h]) colIndex[COLUMN_MAP[h]] = i;
-        else if (COLUMN_MAP[h.toLowerCase()]) colIndex[COLUMN_MAP[h.toLowerCase()]] = i;
-    }
+    if (noHeader) {
+        // Tanpa header — gunakan urutan kolom default
+        const DEFAULT_COLUMNS = ['no_rek', 'nama_rek', 'cif', 'kode_cabang_rek', 'tipe_rek', 'tgl_buka_rek', 'kode_ext', 'kode_fo'];
+        DEFAULT_COLUMNS.forEach((col, i) => { colIndex[col] = i; });
+        startLine = 0;
+        log('Mode: --no-header (kolom default)');
+    } else {
+        const rawHeaders = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+        const headers = rawHeaders.map(normalizeHeader);
+        log(`Header CSV: ${headers.join(', ')}`);
 
-    if (colIndex['no_rek'] === undefined) {
-        log('ERROR: Kolom "no_rek" / "NO_REK" tidak ditemukan di header CSV.');
-        process.exit(1);
+        for (let i = 0; i < headers.length; i++) {
+            const h = headers[i];
+            if (COLUMN_MAP[h]) colIndex[COLUMN_MAP[h]] = i;
+        }
+
+        if (colIndex['no_rek'] === undefined) {
+            log('ERROR: Kolom "no_rek" / "NO_REK" tidak ditemukan di header CSV.');
+            log('Jika CSV tidak memiliki header, gunakan: node import_db_rekening.js <file.csv> --no-header');
+            process.exit(1);
+        }
     }
     log(`Kolom terpetakan: ${Object.keys(colIndex).join(', ')}`);
 
     // 4. Parse data rows
     const rows = [];
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = startLine; i < lines.length; i++) {
         // CSV split sederhana (handle quoted fields)
         const cols = [];
         let current = '';

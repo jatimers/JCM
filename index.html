@@ -1057,22 +1057,22 @@
 
                             <div id="asnKetWrapper" class="${currentStatus==='tidak'?'':'hide'} mb-3">
                                 <label class="block text-sm font-semibold mb-1">Keterangan / Kendala</label>
-                                <textarea id="asnDetailKet" rows="3" class="w-full border rounded px-3 py-2.5 text-sm" placeholder="Tulis alasan tidak dapat diaktivasi...">${currentKet}</textarea>
+                                <textarea id="asnDetailKet" rows="3" class="w-full border rounded px-3 py-2.5 text-sm" placeholder="Tulis alasan tidak dapat diaktivasi..." onblur="saveAsnStatus(asnSelectedCif)">${currentKet}</textarea>
                             </div>
 
                             <div id="asnFotoWrapper" class="${currentStatus==='tidak'?'':'hide'} mb-3">
                                 <label class="block text-sm font-semibold mb-2">Upload Bukti Foto</label>
                                 <div class="flex gap-2 mb-3">
-                                    <button onclick="document.getElementById('asnCameraInput').click()" class="flex-1 bg-blue-500 text-white px-3 py-3 rounded text-sm font-medium hover:bg-blue-600 active:bg-blue-700"><i class="fas fa-camera mr-2"></i>📷 Kamera</button>
-                                    <button onclick="document.getElementById('asnFileInput').click()" class="flex-1 bg-gray-500 text-white px-3 py-3 rounded text-sm font-medium hover:bg-gray-600 active:bg-gray-700"><i class="fas fa-image mr-2"></i>🖼️ Galeri</button>
+                                    <button type="button" onclick="document.getElementById('asnCameraInput').click()" class="flex-1 bg-blue-500 text-white px-3 py-3 rounded text-sm font-medium hover:bg-blue-600 active:bg-blue-700"><i class="fas fa-camera mr-2"></i>📷 Kamera</button>
+                                    <button type="button" onclick="document.getElementById('asnFileInput').click()" class="flex-1 bg-gray-500 text-white px-3 py-3 rounded text-sm font-medium hover:bg-gray-600 active:bg-gray-700"><i class="fas fa-image mr-2"></i>🖼️ Galeri</button>
                                     <input type="file" id="asnCameraInput" accept="image/*" capture="environment" onchange="handleAsnPhotoUpload(this)" class="hidden">
                                     <input type="file" id="asnFileInput" accept="image/*" onchange="handleAsnPhotoUpload(this)" class="hidden">
                                 </div>
-                                <div id="asnFotoPreview" class="mt-2">${currentFoto ? `<img src="${currentFoto}" class="max-w-full rounded shadow" style="max-height:200px" /><br><a href="${currentFoto}" target="_blank" class="text-xs text-blue-500 mt-1 inline-block">🔗 Lihat full</a>` : '<span class="text-xs text-gray-400">📷 Belum ada foto</span>'}</div>
+                                <div id="asnFotoPreview" class="mt-2">${currentFoto ? `<img src="${currentFoto}" class="max-w-full rounded shadow" style="max-height:180px" /><span class="text-[10px] text-blue-500 block mt-1">🔗 <a href="${currentFoto}" target="_blank">Lihat full</a></span>` : '<span class="text-xs text-gray-400">📷 Belum ada foto</span>'}</div>
                                 <div id="asnUploadProgress" class="hide mt-2 text-sm text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Mengupload...</div>
                             </div>
 
-                            <button onclick="saveAsnStatus('${cif}')" class="w-full bg-bjGreen text-white py-3 rounded text-sm font-semibold hover:bg-bjGreenDark active:bg-bjGreenDark mt-2 shadow-sm"><i class="fas fa-save mr-2"></i>Simpan Status</button>
+                            <div class="text-[10px] text-gray-400 mt-2 text-center"><i class="fas fa-check-circle text-green-500 mr-1"></i>Auto-save aktif — data tersimpan otomatis</div>
                         </div>
                     </div>`;
             } catch (err) { panel.innerHTML = '<div class="text-center py-8 text-red-500">Gagal: ' + err.message + '</div>'; }
@@ -1082,29 +1082,73 @@
             const status = document.getElementById('asnDetailStatus').value;
             document.getElementById('asnKetWrapper').classList.toggle('hide', status !== 'tidak');
             document.getElementById('asnFotoWrapper').classList.toggle('hide', status !== 'tidak');
+            // Auto-save on status change
+            saveAsnStatus(asnSelectedCif);
+        }
+
+        // Kompresi gambar client-side sebelum upload
+        async function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                // Kalau sudah kecil (< 300KB), langsung return
+                if (file.size < 300 * 1024) { resolve(file); return; }
+
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    const canvas = document.createElement('canvas');
+                    // Resize: max 1024px, jaga aspect ratio
+                    let w = img.width, h = img.height;
+                    const maxDim = 1024;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                        else { w = Math.round(w * maxDim / h); h = maxDim; }
+                    }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    // Convert ke JPEG, quality 0.65
+                    canvas.toBlob(blob => {
+                        if (blob) {
+                            const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+                            resolve(compressed);
+                        } else { resolve(file); }
+                    }, 'image/jpeg', 0.65);
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+                img.src = url;
+            });
         }
 
         async function handleAsnPhotoUpload(input) {
             if (!input.files || !input.files[0]) return;
-            const file = input.files[0];
-            if (file.size > 5 * 1024 * 1024) { alert('Foto maksimal 5MB.'); return; }
+            const originalFile = input.files[0];
 
             const progressEl = document.getElementById('asnUploadProgress');
             progressEl.classList.remove('hide');
+            progressEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Memproses foto...';
 
             try {
-                const fileName = 'asn_' + asnSelectedCif + '_' + Date.now() + '.' + file.name.split('.').pop();
-                const { error } = await db.storage.from('bukti-aktivasi').upload(fileName, file, { cacheControl: '3600', upsert: false });
+                // Kompresi gambar
+                const file = await compressImage(originalFile);
+                const sizeKB = Math.round(file.size / 1024);
+                progressEl.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i>Mengupload (${sizeKB}KB)...`;
+
+                const fileName = 'asn_' + asnSelectedCif + '_' + Date.now() + '.jpg';
+                const { error } = await db.storage.from('bukti-aktivasi').upload(fileName, file, { cacheControl: '3600', upsert: false, contentType: 'image/jpeg' });
                 if (error) throw error;
 
                 const { data: urlData } = db.storage.from('bukti-aktivasi').getPublicUrl(fileName);
                 const fotoUrl = urlData.publicUrl;
 
-                // Update preview
-                document.getElementById('asnFotoPreview').innerHTML = `<img src="${fotoUrl}" class="max-w-[200px] rounded shadow" /><br><a href="${fotoUrl}" target="_blank" class="text-xs text-blue-500">Lihat full</a>`;
-                // Simpan URL sementara
-                document.getElementById('asnFotoPreview').dataset.fotoUrl = fotoUrl;
-                showToast('Foto berhasil diupload!');
+                // Update preview & simpan URL
+                const preview = document.getElementById('asnFotoPreview');
+                preview.innerHTML = `<img src="${fotoUrl}" class="max-w-full rounded shadow" style="max-height:180px" /><span class="text-[10px] text-green-600 block mt-1">✅ Terupload (${sizeKB}KB)</span>`;
+                preview.dataset.fotoUrl = fotoUrl;
+
+                showToast('Foto terupload!');
+                // Auto-save setelah upload
+                await saveAsnStatus(asnSelectedCif);
             } catch (err) {
                 alert('Gagal upload foto: ' + err.message);
             }
@@ -1113,17 +1157,17 @@
         }
 
         async function saveAsnStatus(cif) {
-            const status = document.getElementById('asnDetailStatus').value;
-            const ket = document.getElementById('asnDetailKet')?.value || '';
+            const status = document.getElementById('asnDetailStatus')?.value || 'belum';
+            const ketEl = document.getElementById('asnDetailKet');
+            const ket = ketEl ? ketEl.value : '';
             const fotoPreview = document.getElementById('asnFotoPreview');
             const fotoUrl = (status === 'tidak' && fotoPreview && fotoPreview.dataset.fotoUrl) ? fotoPreview.dataset.fotoUrl : '';
 
-            showLoader('Menyimpan...');
             try {
-                // Cek apakah sudah ada data untuk CIF ini
                 const { data: existing } = await db.from('db_aktivasi_asn').select('id').eq('cif', cif).limit(1);
                 const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '' };
                 if (fotoUrl) payload.foto_url = fotoUrl;
+                if (status !== 'tidak') { payload.ket_aktivasi = ''; payload.foto_url = null; }
 
                 if (existing && existing.length > 0) {
                     const { error } = await db.from('db_aktivasi_asn').update(payload).eq('cif', cif);
@@ -1133,8 +1177,7 @@
                     if (error) throw error;
                 }
 
-                hideLoader();
-                showToast('Status aktivasi tersimpan!');
+                showToast('Status tersimpan otomatis ✅');
 
                 // Update search result badge
                 const idx = asnSearchResults.findIndex(r => r.cif === cif);
@@ -1142,9 +1185,7 @@
                     asnSearchResults[idx].status_aktivasi = status;
                     asnSearchResults[idx].ket_aktivasi = status === 'tidak' ? ket : '';
                 }
-                // Refresh detail
-                if (idx >= 0) showAsnDetail(cif, idx);
-            } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
+            } catch (err) { showToast('Gagal: ' + err.message, true); }
         }
 
         async function autoSaveField(id, field, value, isMigrasi) {

@@ -1585,25 +1585,26 @@
         async function renderAktivasiAsn(container) {
             showLoader('Memuat Data Aktivasi ASN...');
             try {
-                // Summary & filter dari v_aktivasi_asn (view sudah join db_aktivasi_asn + db_rekening + db_cif + users)
-                const [summaryRes, instansiData, unitData] = await Promise.all([
-                    db.from('db_aktivasi_asn').select('status_aktivasi'),
-                    db.from('v_aktivasi_asn').select('instansi').not('instansi', 'is', null),
-                    db.from('v_aktivasi_asn').select('nama_unit, kode_cabang_user').not('nama_unit', 'eq', 'Tidak Dikenal')
+                // Summary & filter: pakai count query (hindari limit 1000 Supabase)
+                const [totalRes, sudahRes, tidakRes, belumRes] = await Promise.all([
+                    db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }),
+                    db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'sudah'),
+                    db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'tidak'),
+                    db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'belum')
                 ]);
 
-                const summary = summaryRes.data || [];
-                const totalAsn = summary.length;
-                const sudah = summary.filter(s => s.status_aktivasi === 'sudah').length;
-                const tidak = summary.filter(s => s.status_aktivasi === 'tidak').length;
-                const belum = summary.filter(s => s.status_aktivasi === 'belum').length;
+                const totalAsn = totalRes.count || 0;
+                const sudah = sudahRes.count || 0;
+                const tidak = tidakRes.count || 0;
+                const belum = belumRes.count || 0;
 
-                // Instansi list: dari view (hanya instansi yg ada di db_aktivasi_asn, terhubung via db_cif)
-                const instansiList = [...new Set((instansiData.data||[]).map(x => x.instansi).filter(Boolean))].sort();
+                // Instansi list: load semua dari view (pakai fetchAllRows hindari limit)
+                const allViewData = await fetchAllRows('v_aktivasi_asn');
+                const instansiList = [...new Set(allViewData.map(x => x.instansi).filter(Boolean))].sort();
 
-                // Unit list: dari view (db_aktivasi_asn → db_rekening.kode_ext → users.kode_ext → nama_unit)
+                // Unit list: dari view
                 const unitMap = new Map();
-                (unitData.data || []).forEach(u => {
+                allViewData.forEach(u => {
                     if (u.nama_unit && u.nama_unit !== 'Tidak Dikenal' && !unitMap.has(u.kode_cabang_user)) {
                         unitMap.set(u.kode_cabang_user, u.nama_unit);
                     }

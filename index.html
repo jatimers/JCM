@@ -1385,8 +1385,9 @@
             container.innerHTML = `
                 <div class="bg-white rounded-xl shadow-sm flex flex-col mb-6">
                     <div class="flex border-b">
-                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'baru')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'baru' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Aktivasi Rekening Baru</button>
-                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'migrasi')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'migrasi' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Aktivasi Rekening Existing</button>
+                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'baru')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'baru' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Rekening Baru</button>
+                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'migrasi')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'migrasi' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Rekening Lama</button>
+                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'asn')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'asn' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Rekening ASN</button>
                     </div>
                     <div class="p-4 sm:p-6 flex flex-wrap gap-4 items-end justify-between">
                         <div class="flex flex-wrap gap-4 items-end">
@@ -1402,10 +1403,45 @@
             generateLaporan(roleContext);
         }
 
-        function generateLaporan(roleContext) {
+        async function generateLaporan(roleContext) {
             const start = document.getElementById('lap_start').value;
             const end = document.getElementById('lap_end').value;
             const branch = document.getElementById('lap_cabang') ? document.getElementById('lap_cabang').value : 'ALL';
+
+            // --- TAB ASN: fetch dari view ---
+            if (currentReportTab === 'asn') {
+                showLoader('Memuat data ASN...');
+                try {
+                    const allView = await fetchAllRows('v_aktivasi_asn');
+                    // Transform ke format report
+                    let data = allView.map(r => ({
+                        date: '-',
+                        unitName: r.nama_unit || 'Tidak Dikenal',
+                        instansi: r.instansi || '',
+                        noRek: r.no_rek || r.cif || '-',
+                        nama: r.nama_cif || r.nama_rek || '-',
+                        noHp: r.hp_cif || '',
+                        status: r.status_aktivasi || 'belum',
+                        kendala: r.ket_aktivasi || '',
+                        namaFasilitator: '',
+                        tipeProduk: '',
+                        userEstim: r.kode_ext_rek || '',
+                        kodeCabang: r.kode_cabang_user || ''
+                    }));
+
+                    // Filter user
+                    if (roleContext === 'user') {
+                        data = data.filter(c => canViewData({ userEstim: c.userEstim, kodeCabang: c.kodeCabang }, currentUser));
+                    } else if (branch !== 'ALL') {
+                        data = data.filter(c => c.unitName === branch);
+                    }
+
+                    renderAsnLaporan(data, roleContext, branch);
+                } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
+                return;
+            }
+
+            // --- TAB BARU / MIGRASI: existing logic ---
             let rawData = currentReportTab === 'baru' ? customers : migrasiData;
             let data = rawData;
             if (start) data = data.filter(c => c.date >= start);
@@ -1480,6 +1516,74 @@
                         let unitName = ownerUser && ownerUser.namaUnit ? ownerUser.namaUnit : 'Tidak Dikenal';
                         return `<tr class="border-b rincian-row" data-unit="${unitName}"><td class="px-4 py-3">${formatDate(c.date)}</td><td class="px-4 py-3 text-xs font-bold text-indigo-600">${unitName}</td><td class="px-4 py-3 text-gray-500 font-semibold text-xs">${c.userEstim || c.kodeCabang}</td><td class="px-4 py-3 font-mono">${c.noRek}</td><td class="px-4 py-3"><div class="font-semibold text-gray-800">${c.nama}</div><div class="text-xs text-gray-500">${c.noHp || '-'}</div></td>${currentReportTab === 'migrasi' ? `<td class="px-4 py-3 text-xs text-blue-600 font-semibold">${c.namaFasilitator || '-'}</td>` : ''}<td class="px-4 py-3 text-xs font-semibold text-gray-600">${getProductName(c.tipeProduk)}</td><td class="px-4 py-3 font-semibold ${checkStatus(c.status,'Sudah')?'text-green-600':checkStatus(c.status,'Belum')?'text-red-600':'text-orange-600'}">${displayStatusText(c.status)}</td><td class="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" title="${c.kendala || ''}">${c.kendala || '-'}</td></tr>`;
                     }).join('') || `<tr><td colspan="${currentReportTab === 'migrasi' ? 9 : 8}" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada rincian data</td></tr>`}</tbody></table></div>
+                </div>`;
+
+            document.getElementById('laporanResult').innerHTML = resHTML;
+            document.getElementById('laporanResult').classList.remove('hide');
+        }
+
+        function renderAsnLaporan(data, roleContext, branch) {
+            hideLoader();
+            let resHTML = '';
+            const total = data.length;
+            const sudah = data.filter(c => checkStatus(c.status, 'Sudah')).length;
+            const persentase = total === 0 ? 0 : Math.round((sudah / total) * 100);
+
+            // Header
+            resHTML += `
+                <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-t-4 border-t-bjGreen bg-bjLight flex justify-between items-center">
+                    <div><h3 class="font-bold text-bjGreenDark text-lg">Laporan Aktivasi ASN</h3><p class="text-sm text-gray-600 mt-1">Total ASN: <span class="font-bold text-gray-800">${total}</span> | Berhasil: <span class="font-bold text-green-700">${sudah}</span></p></div>
+                    <div class="text-right"><div class="text-4xl font-bold text-bjGreen">${persentase}%</div><div class="text-xs font-semibold text-gray-500 tracking-wide uppercase mt-1">Success Rate</div></div>
+                </div>`;
+
+            // Summary per unit (admin/supervisor)
+            if (roleContext !== 'user' && branch === 'ALL') {
+                const sum = {};
+                data.forEach(c => {
+                    const unit = c.unitName || 'Tidak Dikenal';
+                    if (!sum[unit]) sum[unit] = { name: unit, total: 0, sdh: 0, blm: 0, tdk: 0 };
+                    sum[unit].total++;
+                    if (checkStatus(c.status, 'Sudah')) sum[unit].sdh++;
+                    else if (checkStatus(c.status, 'Tidak')) sum[unit].tdk++;
+                    else sum[unit].blm++;
+                });
+
+                let summaryRows = Object.values(sum).filter(s => s.total > 0).sort((a,b) => b.total - a.total);
+                let grandTotal = 0, grandSdh = 0, grandBlm = 0, grandTdk = 0;
+                let summaryRowsHTML = summaryRows.map(s => {
+                    grandTotal += s.total; grandSdh += s.sdh; grandBlm += s.blm; grandTdk += s.tdk;
+                    let prc = s.total === 0 ? 0 : Math.round((s.sdh / s.total) * 100);
+                    return `<tr class="border-b"><td class="px-4 py-3 font-bold text-gray-800">${s.name}</td><td class="px-4 py-3 text-center font-medium">${s.total}</td><td class="px-4 py-3 text-center font-semibold text-green-600 bg-green-50">${s.sdh}</td><td class="px-4 py-3 text-center text-red-500">${s.blm}</td><td class="px-4 py-3 text-center text-orange-500">${s.tdk}</td><td class="px-4 py-3 text-center font-bold text-indigo-600 bg-indigo-50">${prc}%</td></tr>`;
+                }).join('') || '<tr><td colspan="6" class="text-center py-4">Tidak ada data</td></tr>';
+                let grandPrc = grandTotal === 0 ? 0 : Math.round((grandSdh / grandTotal) * 100);
+                let totalRowHTML = grandTotal > 0 ? `<tr class="border-t-2 border-gray-300 bg-gray-200 font-bold text-gray-800"><td class="px-4 py-3 text-right uppercase text-xs">Total Keseluruhan</td><td class="px-4 py-3 text-center">${grandTotal}</td><td class="px-4 py-3 text-center text-green-700">${grandSdh}</td><td class="px-4 py-3 text-center text-red-700">${grandBlm}</td><td class="px-4 py-3 text-center text-orange-700">${grandTdk}</td><td class="px-4 py-3 text-center text-indigo-700">${grandPrc}%</td></tr>` : '';
+
+                resHTML += `
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                        <div class="p-4 border-b bg-bjLight"><h3 class="font-bold text-bjGreenDark"><i class="fas fa-chart-bar mr-2"></i>Summary Per Unit Kerja</h3></div>
+                        <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Nama Unit Kerja</th><th class="px-4 py-3 text-center">Total</th><th class="px-4 py-3 text-center text-green-600">Sudah</th><th class="px-4 py-3 text-center text-red-600">Belum</th><th class="px-4 py-3 text-center text-orange-600">Tidak Bisa</th><th class="px-4 py-3 text-center">% Berhasil</th></tr></thead>
+                        <tbody>${summaryRowsHTML}${totalRowHTML}</tbody></table></div>
+                    </div>`;
+            }
+
+            // Rincian data
+            const detailColumns = `${roleContext !== 'user' ? '<th class="px-4 py-3">Unit Kerja</th>' : ''}<th class="px-4 py-3">Instansi</th><th class="px-4 py-3">No Rek</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Keterangan</th>`;
+            const detailRows = data.map(c => {
+                return `<tr class="border-b rincian-row" data-unit="${c.unitName}">
+                    ${roleContext !== 'user' ? `<td class="px-4 py-3 text-xs font-bold text-indigo-600">${c.unitName}</td>` : ''}
+                    <td class="px-4 py-3 text-xs text-gray-600">${c.instansi || '-'}</td>
+                    <td class="px-4 py-3 font-mono text-xs">${c.noRek}</td>
+                    <td class="px-4 py-3"><div class="font-semibold text-gray-800">${c.nama}</div><div class="text-xs text-gray-500">${c.noHp || '-'}</div></td>
+                    <td class="px-4 py-3 font-semibold ${checkStatus(c.status,'Sudah')?'text-green-600':checkStatus(c.status,'Belum')?'text-red-600':'text-orange-600'}">${displayStatusText(c.status)}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" title="${c.kendala || ''}">${c.kendala || '-'}</td>
+                </tr>`;
+            }).join('') || `<tr><td colspan="${roleContext !== 'user' ? 6 : 5}" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada rincian data</td></tr>`;
+
+            resHTML += `
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-4 border-b bg-gray-50"><h3 class="font-bold text-gray-700"><i class="fas fa-list text-gray-400 mr-2"></i>Rincian Data (<span id="rincianCount">${total}</span> Baris)</h3></div>
+                    <div class="overflow-x-auto"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr>${detailColumns}</tr></thead>
+                    <tbody>${detailRows}</tbody></table></div>
                 </div>`;
 
             document.getElementById('laporanResult').innerHTML = resHTML;

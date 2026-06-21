@@ -1310,70 +1310,43 @@
         // ============================================================
         // AKTIVASI ASN
         // ============================================================
-        let aktivasiAsnState = { page: 0, pageSize: 50, total: 0, instansi: '', unit: '', data: [], allData: [], cifLookup: {}, unitLookup: {} };
+        let aktivasiAsnState = { page: 0, pageSize: 50, total: 0, instansi: '', unit: '' };
 
         async function renderAktivasiAsn(container) {
             showLoader('Memuat Data Aktivasi ASN...');
             try {
-                // Pre-load semua data pendukung (tabel kecil: 1899 + 1899 + 14 = ~3800 baris)
-                const [aktivasiData, cifData, unitData] = await Promise.all([
-                    fetchAllRows('db_aktivasi_asn'),
-                    fetchAllRows('db_cif'),
-                    db.from('users').select('kode_cabang, nama_unit').not('kode_cabang', 'is', null)
+                // Summary cards dari db_aktivasi_asn (1899 baris, kecil)
+                const [summaryRes, instansiData, unitData] = await Promise.all([
+                    db.from('db_aktivasi_asn').select('status_aktivasi'),
+                    db.from('db_cif').select('instansi').not('instansi', 'is', null),
+                    db.from('v_aktivasi_asn').select('nama_unit, kode_cabang_user').not('nama_unit', 'eq', 'Tidak Dikenal')
                 ]);
 
-                // Build lookup: cif → db_cif
-                const cifLookup = {};
-                (cifData || []).forEach(c => {
-                    cifLookup[c.cif] = {
-                        nama_cif: c.nama_cif || '', hp_cif: c.no_hp || '',
-                        instansi: c.instansi || '', kode_cabang_cif: c.kode_cabang_cif || '',
-                        alamat: c.alamat || '', pekerjaan: c.pekerjaan || ''
-                    };
-                });
+                const summary = summaryRes.data || [];
+                const totalAsn = summary.length;
+                const sudah = summary.filter(s => s.status_aktivasi === 'sudah').length;
+                const tidak = summary.filter(s => s.status_aktivasi === 'tidak').length;
+                const belum = summary.filter(s => s.status_aktivasi === 'belum').length;
 
-                // Build lookup: kode_cabang → nama_unit
-                const unitLookup = {};
+                // Instansi list (dari db_cif)
+                const instansiList = [...new Set((instansiData.data||[]).map(x => x.instansi).filter(Boolean))].sort();
+
+                // Unit list (dari view, distinct)
+                const unitMap = new Map();
                 (unitData.data || []).forEach(u => {
-                    unitLookup[u.kode_cabang] = u.nama_unit || '';
+                    if (u.nama_unit && u.nama_unit !== 'Tidak Dikenal' && !unitMap.has(u.kode_cabang_user)) {
+                        unitMap.set(u.kode_cabang_user, u.nama_unit);
+                    }
                 });
+                const unitList = [...unitMap.entries()].map(([kode, nama]) => ({ kode_cabang: kode, nama_unit: nama }))
+                    .sort((a,b) => (a.nama_unit||'').localeCompare(b.nama_unit||''));
 
-                // Gabung data utama dengan lookup
-                const allData = (aktivasiData || []).map(a => {
-                    const cif = cifLookup[a.cif] || {};
-                    const kodeCab = cif.kode_cabang_cif || '';
-                    return {
-                        id: a.id, cif: a.cif,
-                        status_aktivasi: a.status_aktivasi || 'belum',
-                        ket_aktivasi: a.ket_aktivasi || '',
-                        no_rek_aktivasi: a.no_rek_aktivasi || '',
-                        nama_cif: cif.nama_cif || '', hp_cif: cif.hp_cif || '',
-                        instansi: cif.instansi || '', kode_cabang_cif: kodeCab,
-                        nama_unit: unitLookup[kodeCab] || ''
-                    };
-                });
-
-                // Summary cards
-                const totalAsn = allData.length;
-                const sudah = allData.filter(r => r.status_aktivasi === 'sudah').length;
-                const tidak = allData.filter(r => r.status_aktivasi === 'tidak').length;
-                const belum = allData.filter(r => r.status_aktivasi === 'belum').length;
-
-                // Distinct instansi untuk filter
-                const instansiList = [...new Set(allData.map(r => r.instansi).filter(Boolean))].sort();
-                // Distinct unit
-                const unitList = [...new Map(allData.filter(r => r.kode_cabang_cif).map(r => [r.kode_cabang_cif, { kode_cabang: r.kode_cabang_cif, nama_unit: r.nama_unit || r.kode_cabang_cif }])).values()].sort((a,b) => (a.nama_unit||'').localeCompare(b.nama_unit||''));
-
-                aktivasiAsnState.allData = allData;
-                aktivasiAsnState.cifLookup = cifLookup;
-                aktivasiAsnState.unitLookup = unitLookup;
                 aktivasiAsnState.instansiList = instansiList;
                 aktivasiAsnState.unitList = unitList;
 
                 hideLoader();
                 container.innerHTML = `
                     <div id="aktivasiAsnContent">
-                        <!-- Cards -->
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                             <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
                                 <div class="text-sm text-gray-500 uppercase font-semibold">Sudah Aktivasi</div>
@@ -1392,7 +1365,6 @@
                             </div>
                         </div>
 
-                        <!-- Filters -->
                         <div class="bg-white rounded-xl shadow-sm p-4 mb-4 flex flex-wrap items-center gap-3">
                             <div class="flex items-center gap-2">
                                 <label class="text-sm font-semibold text-gray-600"><i class="fas fa-building mr-1"></i>Instansi</label>
@@ -1409,10 +1381,9 @@
                                 </select>
                             </div>
                             <button onclick="resetFilterAktivasiAsn()" class="text-xs bg-gray-200 px-3 py-2 rounded hover:bg-gray-300 font-medium"><i class="fas fa-times mr-1"></i>Reset</button>
-                            <span class="text-xs text-gray-400 ml-auto" id="asnPageInfo">${totalAsn} data</span>
+                            <span class="text-xs text-gray-400 ml-auto" id="asnPageInfo">Memuat...</span>
                         </div>
 
-                        <!-- Table -->
                         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm text-left">
@@ -1426,7 +1397,7 @@
                                             <th class="px-4 py-3 text-center">Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="asnTableBody"></tbody>
+                                    <tbody id="asnTableBody"><tr><td colspan="6" class="text-center py-8 text-gray-400">Memuat data...</td></tr></tbody>
                                 </table>
                             </div>
                             <div id="asnPagination" class="px-4 py-3 border-t bg-gray-50 flex justify-between items-center"></div>
@@ -1440,40 +1411,35 @@
         async function loadAktivasiAsnPage(page) {
             aktivasiAsnState.page = page;
             const ps = aktivasiAsnState.pageSize;
-
-            // Filter dari data yang sudah di-preload
-            let filtered = [...aktivasiAsnState.allData];
-            if (aktivasiAsnState.instansi) {
-                filtered = filtered.filter(r => r.instansi === aktivasiAsnState.instansi);
-            }
-            if (aktivasiAsnState.unit) {
-                filtered = filtered.filter(r => r.kode_cabang_cif === aktivasiAsnState.unit);
-            }
-
-            aktivasiAsnState.total = filtered.length;
             const start = page * ps;
-            const pageData = filtered.slice(start, start + ps);
+            const end = start + ps - 1;
 
-            // Render table
+            // Query view dengan filter + paginasi
+            let query = db.from('v_aktivasi_asn').select('*', { count: 'exact' });
+            if (aktivasiAsnState.instansi) query = query.eq('instansi', aktivasiAsnState.instansi);
+            if (aktivasiAsnState.unit) query = query.eq('kode_cabang_user', aktivasiAsnState.unit);
+
+            const { data, count, error } = await query.range(start, end).order('cif');
+            if (error) { alert('Gagal: ' + error.message); return; }
+
+            aktivasiAsnState.total = count || 0;
             const tbody = document.getElementById('asnTableBody');
             if (!tbody) return;
 
-            if (pageData.length === 0) {
+            if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada data</td></tr>';
             } else {
-                tbody.innerHTML = pageData.map((r, i) => {
+                tbody.innerHTML = data.map((r, i) => {
                     const statusClass = r.status_aktivasi === 'sudah' ? 'bg-green-100 text-green-800' :
                                        r.status_aktivasi === 'tidak' ? 'bg-red-100 text-red-800' :
                                        'bg-yellow-100 text-yellow-800';
                     const statusLabel = r.status_aktivasi === 'sudah' ? 'Sudah' :
                                        r.status_aktivasi === 'tidak' ? 'Tidak Bisa' : 'Belum';
                     const rowNum = start + i + 1;
-                    // NO Rekening: cari dari no_rek_aktivasi dulu, kalau kosong ambil dari db_rekening (disimulasikan via cif)
-                    const noRek = r.no_rek_aktivasi || r.cif;
                     return `<tr class="border-b hover:bg-gray-50">
                         <td class="px-4 py-2 text-center text-xs text-gray-500">${rowNum}</td>
-                        <td class="px-4 py-2 font-mono text-xs">${noRek}</td>
-                        <td class="px-4 py-2"><div class="font-semibold text-gray-800">${r.nama_cif || '-'}</div><div class="text-xs text-gray-500">${r.hp_cif || '-'}</div></td>
+                        <td class="px-4 py-2 font-mono text-xs">${r.no_rek || r.cif || '-'}</td>
+                        <td class="px-4 py-2"><div class="font-semibold text-gray-800">${r.nama_cif || r.nama_rek || '-'}</div><div class="text-xs text-gray-500">${r.hp_cif || '-'}</div></td>
                         <td class="px-4 py-2 text-xs text-gray-600 max-w-[200px] truncate" title="${r.instansi || ''}">${r.instansi || '-'}</td>
                         <td class="px-4 py-2 text-xs font-semibold text-indigo-600">${r.nama_unit || '-'}</td>
                         <td class="px-4 py-2 text-center"><span class="px-2 py-1 text-xs font-semibold rounded ${statusClass}">${statusLabel}</span></td>
@@ -1481,9 +1447,8 @@
                 }).join('');
             }
 
-            // Pagination
             const totalPages = Math.ceil(aktivasiAsnState.total / ps) || 1;
-            document.getElementById('asnPageInfo').innerText = `${aktivasiAsnState.total} data | Halaman ${page+1}/${totalPages}`;
+            document.getElementById('asnPageInfo').innerText = `${aktivasiAsnState.total} data | Hal ${page+1}/${totalPages}`;
             document.getElementById('asnPagination').innerHTML = `
                 <button onclick="loadAktivasiAsnPage(0)" ${page===0?'disabled':''} class="px-3 py-1 text-sm rounded border ${page===0?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-double-left"></i></button>
                 <button onclick="loadAktivasiAsnPage(${page-1})" ${page===0?'disabled':''} class="px-3 py-1 text-sm rounded border ${page===0?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-left"></i></button>

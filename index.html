@@ -1732,15 +1732,11 @@
                 const allViewData = await fetchAllRows('v_aktivasi_asn');
                 const instansiList = [...new Set(allViewData.map(x => x.instansi).filter(Boolean))].sort();
 
-                // Unit list: dari view
-                const unitMap = new Map();
-                allViewData.forEach(u => {
-                    if (u.nama_unit && u.nama_unit !== 'Tidak Dikenal' && !unitMap.has(u.kode_cabang_user)) {
-                        unitMap.set(u.kode_cabang_user, u.nama_unit);
-                    }
-                });
-                const unitList = [...unitMap.entries()].map(([kode, nama]) => ({ kode_cabang: kode, nama_unit: nama }))
-                    .sort((a,b) => (a.nama_unit||'').localeCompare(b.nama_unit||''));
+                // Unit list: distinct nama_unit dari view (sama seperti laporan)
+                const unitList = [...new Set(allViewData.map(u => u.nama_unit).filter(Boolean))]
+                    .filter(u => u !== 'Tidak Dikenal')
+                    .sort()
+                    .map(nama => ({ nama_unit: nama }));
 
                 aktivasiAsnState.instansiList = instansiList;
                 aktivasiAsnState.unitList = unitList;
@@ -1778,7 +1774,7 @@
                                 <label class="text-sm font-semibold text-gray-600"><i class="fas fa-sitemap mr-1"></i>Unit Kerja</label>
                                 <select id="filterUnitAsn" onchange="applyFilterAktivasiAsn()" class="border rounded px-3 py-2 text-sm min-w-[180px]">
                                     <option value="">Semua Unit</option>
-                                    ${unitList.map(u => `<option value="${u.kode_cabang}">${u.nama_unit || u.kode_cabang}</option>`).join('')}
+                                    ${unitList.map(u => `<option value="${u.nama_unit}">${u.nama_unit}</option>`).join('')}
                                 </select>
                             </div>
                             <button onclick="resetFilterAktivasiAsn()" class="text-xs bg-gray-200 px-3 py-2 rounded hover:bg-gray-300 font-medium"><i class="fas fa-times mr-1"></i>Reset</button>
@@ -1818,7 +1814,7 @@
             // Query view dengan filter + paginasi
             let query = db.from('v_aktivasi_asn').select('*', { count: 'exact' });
             if (aktivasiAsnState.instansi) query = query.eq('instansi', aktivasiAsnState.instansi);
-            if (aktivasiAsnState.unit) query = query.eq('kode_cabang_user', aktivasiAsnState.unit);
+            if (aktivasiAsnState.unit) query = query.eq('nama_unit', aktivasiAsnState.unit);
 
             const { data, count, error } = await query.range(start, end).order('cif');
             if (error) { alert('Gagal: ' + error.message); return; }

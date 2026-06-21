@@ -1410,37 +1410,50 @@
 
             // --- TAB ASN: fetch dari view ---
             if (currentReportTab === 'asn') {
-                showLoader('Memuat data ASN...');
+                showLoader('Memuat ringkasan...');
                 try {
-                    const allView = await fetchAllRows('v_aktivasi_asn');
-                    // Transform ke format report
-                    let data = allView.map(r => ({
-                        date: r.tgl || '-',
-                        unitName: r.nama_unit || 'Tidak Dikenal',
-                        instansi: r.instansi || '',
-                        noRek: r.no_rek || r.cif || '-',
-                        nama: r.nama_cif || r.nama_rek || '-',
-                        noHp: r.hp_cif || '',
-                        status: r.status_aktivasi || 'belum',
-                        kendala: r.ket_aktivasi || '',
-                        namaFasilitator: '',
-                        tipeProduk: '',
-                        userEstim: r.kode_ext_rek || '',
-                        kodeCabang: r.kode_cabang_user || ''
-                    }));
+                    // Summary: hitung count saja (tanpa load semua data)
+                    const [totalRes, sudahRes, tidakRes, belumRes] = await Promise.all([
+                        db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }),
+                        db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'sudah'),
+                        db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'tidak'),
+                        db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'belum')
+                    ]);
 
-                    // Filter tanggal
-                    if (start) data = data.filter(c => c.date >= start);
-                    if (end) data = data.filter(c => c.date <= end);
+                    const totalAsn = totalRes.count || 0;
+                    const sudah = sudahRes.count || 0;
+                    const tidak = tidakRes.count || 0;
+                    const belum = belumRes.count || 0;
+                    const persentase = totalAsn === 0 ? 0 : Math.round((sudah / totalAsn) * 100);
 
-                    // Filter user
-                    if (roleContext === 'user') {
-                        data = data.filter(c => canViewData({ userEstim: c.userEstim, kodeCabang: c.kodeCabang }, currentUser));
-                    } else if (branch !== 'ALL') {
-                        data = data.filter(c => c.unitName === branch);
-                    }
+                    // Unit list untuk filter
+                    const unitData = await db.from('v_aktivasi_asn').select('nama_unit, kode_cabang_user').not('nama_unit', 'eq', 'Tidak Dikenal');
+                    const unitMap = new Map();
+                    (unitData.data || []).forEach(u => { if (!unitMap.has(u.kode_cabang_user)) unitMap.set(u.kode_cabang_user, u.nama_unit); });
+                    const unitOptions = [...unitMap.entries()].map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
 
-                    renderAsnLaporan(data, roleContext, branch);
+                    hideLoader();
+
+                    const resHTML = `
+                        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-t-4 border-t-bjGreen bg-bjLight flex justify-between items-center mb-6">
+                            <div><h3 class="font-bold text-bjGreenDark text-lg">Laporan Aktivasi ASN</h3><p class="text-sm text-gray-600 mt-1">Total ASN: <span class="font-bold text-gray-800">${totalAsn}</span> | Berhasil: <span class="font-bold text-green-700">${sudah}</span></p></div>
+                            <div class="text-right"><div class="text-4xl font-bold text-bjGreen">${persentase}%</div><div class="text-xs font-semibold text-gray-500 tracking-wide uppercase mt-1">Success Rate</div></div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+                            <div class="flex flex-wrap gap-3 items-end">
+                                <div><label class="block text-xs mb-1 font-medium text-gray-600">Unit Kerja</label><select id="lapAsnUnit" class="border rounded px-3 py-2 text-sm min-w-[160px]"><option value="">Semua Unit</option>${unitOptions}</select></div>
+                                <div><label class="block text-xs mb-1 font-medium text-gray-600">Status</label><select id="lapAsnStatus" class="border rounded px-3 py-2 text-sm"><option value="">Semua Status</option><option value="sudah">Sudah</option><option value="belum">Belum</option><option value="tidak">Tidak Bisa</option></select></div>
+                                <button onclick="loadAsnLaporanDetail()" class="bg-bjGreen text-white px-5 py-2 rounded text-sm font-semibold hover:bg-bjGreenDark"><i class="fas fa-search mr-1"></i>Tampilkan</button>
+                                <button onclick="takeScreenshot('asnLaporanResult', 'Laporan_ASN')" class="bg-indigo-600 text-white px-5 py-2 rounded text-sm shadow hover:bg-indigo-700 transition"><i class="fas fa-camera mr-2"></i>Screenshot</button>
+                            </div>
+                        </div>
+                        <div id="asnLaporanResult"></div>`;
+
+                    document.getElementById('laporanResult').innerHTML = resHTML;
+                    document.getElementById('laporanResult').classList.remove('hide');
+
+                    // Default: tampilkan data hari ini
+                    await loadAsnLaporanDetail(true);
                 } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
                 return;
             }
@@ -1526,73 +1539,61 @@
             document.getElementById('laporanResult').classList.remove('hide');
         }
 
-        function renderAsnLaporan(data, roleContext, branch) {
-            hideLoader();
-            let resHTML = '';
-            const total = data.length;
-            const sudah = data.filter(c => checkStatus(c.status, 'Sudah')).length;
-            const persentase = total === 0 ? 0 : Math.round((sudah / total) * 100);
+        async function loadAsnLaporanDetail(isDefault = false) {
+            const unit = document.getElementById('lapAsnUnit')?.value || '';
+            const status = document.getElementById('lapAsnStatus')?.value || '';
+            const start = document.getElementById('lap_start')?.value || '';
+            const end = document.getElementById('lap_end')?.value || '';
 
-            // Header
-            resHTML += `
-                <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-t-4 border-t-bjGreen bg-bjLight flex justify-between items-center">
-                    <div><h3 class="font-bold text-bjGreenDark text-lg">Laporan Aktivasi ASN</h3><p class="text-sm text-gray-600 mt-1">Total ASN: <span class="font-bold text-gray-800">${total}</span> | Berhasil: <span class="font-bold text-green-700">${sudah}</span></p></div>
-                    <div class="text-right"><div class="text-4xl font-bold text-bjGreen">${persentase}%</div><div class="text-xs font-semibold text-gray-500 tracking-wide uppercase mt-1">Success Rate</div></div>
-                </div>`;
+            const resultDiv = document.getElementById('asnLaporanResult');
+            resultDiv.innerHTML = '<div class="text-center py-6 text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Memuat data...</div>';
 
-            // Summary per unit (admin/supervisor)
-            if (roleContext !== 'user' && branch === 'ALL') {
-                const sum = {};
-                data.forEach(c => {
-                    const unit = c.unitName || 'Tidak Dikenal';
-                    if (!sum[unit]) sum[unit] = { name: unit, total: 0, sdh: 0, blm: 0, tdk: 0 };
-                    sum[unit].total++;
-                    if (checkStatus(c.status, 'Sudah')) sum[unit].sdh++;
-                    else if (checkStatus(c.status, 'Tidak')) sum[unit].tdk++;
-                    else sum[unit].blm++;
-                });
+            try {
+                let query = db.from('v_aktivasi_asn').select('*', { count: 'exact' });
 
-                let summaryRows = Object.values(sum).filter(s => s.total > 0).sort((a,b) => b.total - a.total);
-                let grandTotal = 0, grandSdh = 0, grandBlm = 0, grandTdk = 0;
-                let summaryRowsHTML = summaryRows.map(s => {
-                    grandTotal += s.total; grandSdh += s.sdh; grandBlm += s.blm; grandTdk += s.tdk;
-                    let prc = s.total === 0 ? 0 : Math.round((s.sdh / s.total) * 100);
-                    return `<tr class="border-b"><td class="px-4 py-3 font-bold text-gray-800">${s.name}</td><td class="px-4 py-3 text-center font-medium">${s.total}</td><td class="px-4 py-3 text-center font-semibold text-green-600 bg-green-50">${s.sdh}</td><td class="px-4 py-3 text-center text-red-500">${s.blm}</td><td class="px-4 py-3 text-center text-orange-500">${s.tdk}</td><td class="px-4 py-3 text-center font-bold text-indigo-600 bg-indigo-50">${prc}%</td></tr>`;
-                }).join('') || '<tr><td colspan="6" class="text-center py-4">Tidak ada data</td></tr>';
-                let grandPrc = grandTotal === 0 ? 0 : Math.round((grandSdh / grandTotal) * 100);
-                let totalRowHTML = grandTotal > 0 ? `<tr class="border-t-2 border-gray-300 bg-gray-200 font-bold text-gray-800"><td class="px-4 py-3 text-right uppercase text-xs">Total Keseluruhan</td><td class="px-4 py-3 text-center">${grandTotal}</td><td class="px-4 py-3 text-center text-green-700">${grandSdh}</td><td class="px-4 py-3 text-center text-red-700">${grandBlm}</td><td class="px-4 py-3 text-center text-orange-700">${grandTdk}</td><td class="px-4 py-3 text-center text-indigo-700">${grandPrc}%</td></tr>` : '';
+                // Default: data hari ini saja
+                if (isDefault || start) {
+                    const filterDate = start || getLocalYMD();
+                    query = query.gte('tgl', filterDate).lte('tgl', end || filterDate);
+                } else {
+                    if (start) query = query.gte('tgl', start);
+                    if (end) query = query.lte('tgl', end);
+                }
 
-                resHTML += `
-                    <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-                        <div class="p-4 border-b bg-bjLight"><h3 class="font-bold text-bjGreenDark"><i class="fas fa-chart-bar mr-2"></i>Summary Per Unit Kerja</h3></div>
-                        <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Nama Unit Kerja</th><th class="px-4 py-3 text-center">Total</th><th class="px-4 py-3 text-center text-green-600">Sudah</th><th class="px-4 py-3 text-center text-red-600">Belum</th><th class="px-4 py-3 text-center text-orange-600">Tidak Bisa</th><th class="px-4 py-3 text-center">% Berhasil</th></tr></thead>
-                        <tbody>${summaryRowsHTML}${totalRowHTML}</tbody></table></div>
+                if (unit) query = query.eq('kode_cabang_user', unit);
+                if (status) query = query.eq('status_aktivasi', status);
+
+                // Ambil max 500 baris untuk performa
+                const { data, count, error } = await query.range(0, 499).order('tgl', { ascending: false });
+                if (error) throw error;
+
+                const total = count || 0;
+                const rows = (data || []).map((r, i) => {
+                    const statusClass = r.status_aktivasi === 'sudah' ? 'text-green-600' : r.status_aktivasi === 'tidak' ? 'text-orange-600' : 'text-red-600';
+                    const statusLabel = r.status_aktivasi === 'sudah' ? 'Sudah' : r.status_aktivasi === 'tidak' ? 'Tidak Bisa' : 'Belum';
+                    return `<tr class="border-b">
+                        <td class="px-4 py-3 text-xs text-gray-500">${r.tgl ? formatDate(r.tgl) : '-'}</td>
+                        <td class="px-4 py-3 text-xs font-bold text-indigo-600">${r.nama_unit || '-'}</td>
+                        <td class="px-4 py-3 text-xs text-gray-600">${r.instansi || '-'}</td>
+                        <td class="px-4 py-3 font-mono text-xs">${r.no_rek || r.cif || '-'}</td>
+                        <td class="px-4 py-3"><div class="font-semibold text-gray-800">${r.nama_cif || r.nama_rek || '-'}</div><div class="text-xs text-gray-500">${r.hp_cif || '-'}</div></td>
+                        <td class="px-4 py-3 font-semibold ${statusClass}">${statusLabel}</td>
+                        <td class="px-4 py-3 text-xs text-gray-600 max-w-[150px] truncate" title="${r.ket_aktivasi || ''}">${r.ket_aktivasi || '-'}</td>
+                    </tr>`;
+                }).join('') || '<tr><td colspan="7" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada data</td></tr>';
+
+                resultDiv.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                            <h3 class="font-bold text-gray-700"><i class="fas fa-list text-gray-400 mr-2"></i>Rincian Data (${total} baris${total > 500 ? ', tampil 500 teratas' : ''})</h3>
+                            ${total > 500 ? '<span class="text-xs text-orange-500"><i class="fas fa-exclamation-triangle mr-1"></i>Data banyak, persempit filter</span>' : ''}
+                        </div>
+                        <div class="overflow-x-auto"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Tgl</th><th class="px-4 py-3">Unit Kerja</th><th class="px-4 py-3">Instansi</th><th class="px-4 py-3">No Rek</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Keterangan</th></tr></thead>
+                        <tbody>${rows}</tbody></table></div>
                     </div>`;
+            } catch (err) {
+                resultDiv.innerHTML = '<div class="text-center py-6 text-red-500">Gagal: ' + err.message + '</div>';
             }
-
-            // Rincian data
-            const detailColumns = `<th class="px-4 py-3">Tgl</th>${roleContext !== 'user' ? '<th class="px-4 py-3">Unit Kerja</th>' : ''}<th class="px-4 py-3">Instansi</th><th class="px-4 py-3">No Rek</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Keterangan</th>`;
-            const detailRows = data.map(c => {
-                return `<tr class="border-b rincian-row" data-unit="${c.unitName}">
-                    <td class="px-4 py-3 text-xs text-gray-500">${c.date === '-' ? '-' : formatDate(c.date)}</td>
-                    ${roleContext !== 'user' ? `<td class="px-4 py-3 text-xs font-bold text-indigo-600">${c.unitName}</td>` : ''}
-                    <td class="px-4 py-3 text-xs text-gray-600">${c.instansi || '-'}</td>
-                    <td class="px-4 py-3 font-mono text-xs">${c.noRek}</td>
-                    <td class="px-4 py-3"><div class="font-semibold text-gray-800">${c.nama}</div><div class="text-xs text-gray-500">${c.noHp || '-'}</div></td>
-                    <td class="px-4 py-3 font-semibold ${checkStatus(c.status,'Sudah')?'text-green-600':checkStatus(c.status,'Belum')?'text-red-600':'text-orange-600'}">${displayStatusText(c.status)}</td>
-                    <td class="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" title="${c.kendala || ''}">${c.kendala || '-'}</td>
-                </tr>`;
-            }).join('') || `<tr><td colspan="${roleContext !== 'user' ? 6 : 5}" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada rincian data</td></tr>`;
-
-            resHTML += `
-                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div class="p-4 border-b bg-gray-50"><h3 class="font-bold text-gray-700"><i class="fas fa-list text-gray-400 mr-2"></i>Rincian Data (<span id="rincianCount">${total}</span> Baris)</h3></div>
-                    <div class="overflow-x-auto"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr>${detailColumns}</tr></thead>
-                    <tbody>${detailRows}</tbody></table></div>
-                </div>`;
-
-            document.getElementById('laporanResult').innerHTML = resHTML;
-            document.getElementById('laporanResult').classList.remove('hide');
         }
 
         function filterRincianData(unit) {

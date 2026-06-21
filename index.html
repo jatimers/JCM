@@ -1165,7 +1165,7 @@
 
             try {
                 const { data: existing } = await db.from('db_aktivasi_asn').select('id').eq('cif', cif).limit(1);
-                const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '' };
+                const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '', tgl: getLocalYMD() };
                 if (fotoUrl) payload.foto_url = fotoUrl;
                 if (status !== 'tidak') { payload.ket_aktivasi = ''; payload.foto_url = null; }
 
@@ -1415,7 +1415,7 @@
                     const allView = await fetchAllRows('v_aktivasi_asn');
                     // Transform ke format report
                     let data = allView.map(r => ({
-                        date: '-',
+                        date: r.tgl || '-',
                         unitName: r.nama_unit || 'Tidak Dikenal',
                         instansi: r.instansi || '',
                         noRek: r.no_rek || r.cif || '-',
@@ -1428,6 +1428,10 @@
                         userEstim: r.kode_ext_rek || '',
                         kodeCabang: r.kode_cabang_user || ''
                     }));
+
+                    // Filter tanggal
+                    if (start) data = data.filter(c => c.date >= start);
+                    if (end) data = data.filter(c => c.date <= end);
 
                     // Filter user
                     if (roleContext === 'user') {
@@ -1567,9 +1571,10 @@
             }
 
             // Rincian data
-            const detailColumns = `${roleContext !== 'user' ? '<th class="px-4 py-3">Unit Kerja</th>' : ''}<th class="px-4 py-3">Instansi</th><th class="px-4 py-3">No Rek</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Keterangan</th>`;
+            const detailColumns = `<th class="px-4 py-3">Tgl</th>${roleContext !== 'user' ? '<th class="px-4 py-3">Unit Kerja</th>' : ''}<th class="px-4 py-3">Instansi</th><th class="px-4 py-3">No Rek</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Keterangan</th>`;
             const detailRows = data.map(c => {
                 return `<tr class="border-b rincian-row" data-unit="${c.unitName}">
+                    <td class="px-4 py-3 text-xs text-gray-500">${c.date === '-' ? '-' : formatDate(c.date)}</td>
                     ${roleContext !== 'user' ? `<td class="px-4 py-3 text-xs font-bold text-indigo-600">${c.unitName}</td>` : ''}
                     <td class="px-4 py-3 text-xs text-gray-600">${c.instansi || '-'}</td>
                     <td class="px-4 py-3 font-mono text-xs">${c.noRek}</td>
@@ -1929,7 +1934,7 @@
             const ket = document.getElementById('adminAsnKet_' + cif)?.value || '';
             showLoader('Menyimpan...');
             try {
-                const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '' };
+                const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '', tgl: getLocalYMD() };
                 const { error } = await db.from('db_aktivasi_asn').update(payload).eq('cif', cif);
                 if (error) throw error;
                 hideLoader();

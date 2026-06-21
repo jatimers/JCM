@@ -1568,6 +1568,36 @@
                 if (error) throw error;
 
                 const total = count || 0;
+
+                // Summary per unit (dari data yang sudah difilter)
+                const sumMap = {};
+                (data || []).forEach(r => {
+                    const unit = r.nama_unit || 'Tidak Dikenal';
+                    if (!sumMap[unit]) sumMap[unit] = { name: unit, total: 0, sdh: 0, blm: 0, tdk: 0 };
+                    sumMap[unit].total++;
+                    if (r.status_aktivasi === 'sudah') sumMap[unit].sdh++;
+                    else if (r.status_aktivasi === 'tidak') sumMap[unit].tdk++;
+                    else sumMap[unit].blm++;
+                });
+                const summaryRows = Object.values(sumMap).sort((a,b) => b.total - a.total);
+                let summaryHTML = '';
+                if (summaryRows.length > 0) {
+                    let gTotal = 0, gSdh = 0, gBlm = 0, gTdk = 0;
+                    const rowsHTML = summaryRows.map(s => {
+                        gTotal += s.total; gSdh += s.sdh; gBlm += s.blm; gTdk += s.tdk;
+                        const prc = s.total === 0 ? 0 : Math.round((s.sdh / s.total) * 100);
+                        return `<tr class="border-b"><td class="px-4 py-3 font-bold text-gray-800">${s.name}</td><td class="px-4 py-3 text-center font-medium">${s.total}</td><td class="px-4 py-3 text-center font-semibold text-green-600 bg-green-50">${s.sdh}</td><td class="px-4 py-3 text-center text-red-500">${s.blm}</td><td class="px-4 py-3 text-center text-orange-500">${s.tdk}</td><td class="px-4 py-3 text-center font-bold text-indigo-600 bg-indigo-50">${prc}%</td></tr>`;
+                    }).join('');
+                    const grandPrc = gTotal === 0 ? 0 : Math.round((gSdh / gTotal) * 100);
+                    const totalRow = `<tr class="border-t-2 border-gray-300 bg-gray-200 font-bold text-gray-800"><td class="px-4 py-3 text-right uppercase text-xs">Total</td><td class="px-4 py-3 text-center">${gTotal}</td><td class="px-4 py-3 text-center text-green-700">${gSdh}</td><td class="px-4 py-3 text-center text-red-700">${gBlm}</td><td class="px-4 py-3 text-center text-orange-700">${gTdk}</td><td class="px-4 py-3 text-center text-indigo-700">${grandPrc}%</td></tr>`;
+                    summaryHTML = `
+                        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div class="p-4 border-b bg-bjLight"><h3 class="font-bold text-bjGreenDark"><i class="fas fa-chart-bar mr-2"></i>Summary Per Unit Kerja</h3></div>
+                            <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Nama Unit Kerja</th><th class="px-4 py-3 text-center">Total</th><th class="px-4 py-3 text-center text-green-600">Sudah</th><th class="px-4 py-3 text-center text-red-600">Belum</th><th class="px-4 py-3 text-center text-orange-600">Tidak Bisa</th><th class="px-4 py-3 text-center">% Berhasil</th></tr></thead>
+                            <tbody>${rowsHTML}${totalRow}</tbody></table></div>
+                        </div>`;
+                }
+
                 const rows = (data || []).map((r, i) => {
                     const statusClass = r.status_aktivasi === 'sudah' ? 'text-green-600' : r.status_aktivasi === 'tidak' ? 'text-orange-600' : 'text-red-600';
                     const statusLabel = r.status_aktivasi === 'sudah' ? 'Sudah' : r.status_aktivasi === 'tidak' ? 'Tidak Bisa' : 'Belum';
@@ -1583,6 +1613,7 @@
                 }).join('') || '<tr><td colspan="7" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada data</td></tr>';
 
                 resultDiv.innerHTML = `
+                    ${summaryHTML}
                     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                         <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
                             <h3 class="font-bold text-gray-700"><i class="fas fa-list text-gray-400 mr-2"></i>Rincian Data (${total} baris${total > 500 ? ', tampil 500 teratas' : ''})</h3>

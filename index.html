@@ -1587,7 +1587,7 @@
                 const rows = (data || []).map((r, i) => {
                     const statusClass = r.status_aktivasi === 'sudah' ? 'text-green-600' : r.status_aktivasi === 'tidak' ? 'text-orange-600' : 'text-red-600';
                     const statusLabel = r.status_aktivasi === 'sudah' ? 'Sudah' : r.status_aktivasi === 'tidak' ? 'Tidak Bisa' : 'Belum';
-                    return `<tr class="border-b rincian-row" data-unit="${r.nama_unit || '-'}">
+                    return `<tr class="border-b rincian-row hover:bg-blue-50 cursor-pointer transition" data-unit="${r.nama_unit || '-'}" onclick="showAsnTableDetail('${r.cif}')">
                         <td class="px-4 py-3 text-xs text-gray-500">${r.tgl ? formatDate(r.tgl) : '-'}</td>
                         <td class="px-4 py-3 text-xs font-bold text-indigo-600">${r.nama_unit || '-'}</td>
                         <td class="px-4 py-3 text-xs text-gray-600">${r.instansi || '-'}</td>

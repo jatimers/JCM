@@ -331,7 +331,20 @@
             <form id="userForm" onsubmit="saveUserData(event)" class="space-y-4">
                 <input type="hidden" id="user_mode">
                 <div><label class="block text-sm mb-1">Kode User / Cabang ID</label><input type="text" id="user_id" class="w-full border rounded px-3 py-2" required></div>
-                <div><label class="block text-sm mb-1">Nama Unit Kerja</label><input type="text" id="user_unit" class="w-full border rounded px-3 py-2" placeholder="Contoh: Cabang Lumajang" required></div>
+                <div><label class="block text-sm mb-1">Nama Unit Kerja</label><select id="user_unit" class="w-full border rounded px-3 py-2" required>
+                    <option value="">-- Pilih Unit Kerja --</option>
+                    <option value="Cabang Lumajang">Cabang Lumajang</option>
+                    <option value="Capem Pasirian">Capem Pasirian</option>
+                    <option value="Capem Sukodono">Capem Sukodono</option>
+                    <option value="Capem Pronojiwo">Capem Pronojiwo</option>
+                    <option value="Capem Yosowilangun">Capem Yosowilangun</option>
+                    <option value="KF Senduro">KF Senduro</option>
+                    <option value="KF Pemda">KF Pemda</option>
+                    <option value="KF Klakah">KF Klakah</option>
+                    <option value="KF Jatiroto">KF Jatiroto</option>
+                    <option value="KF RSUD Haryoto">KF RSUD Haryoto</option>
+                    <option value="KF Tempursari">KF Tempursari</option>
+                </select></div>
                 <div><label class="block text-sm mb-1">Nama Pengguna (User)</label><input type="text" id="user_nama" class="w-full border rounded px-3 py-2" placeholder="Contoh: Budi Santoso" required></div>
                 <div>
                     <label class="block text-sm mb-1">Role Akses</label>

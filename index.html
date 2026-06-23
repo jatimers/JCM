@@ -1791,6 +1791,7 @@
                                 </select>
                             </div>
                             <button onclick="resetFilterAktivasiAsn()" class="text-xs bg-gray-200 px-3 py-2 rounded hover:bg-gray-300 font-medium"><i class="fas fa-times mr-1"></i>Reset</button>
+                            <button onclick="exportAktivasiAsnExcel()" class="text-xs bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 font-medium"><i class="fas fa-download mr-1"></i>Export Excel</button>
                             <span class="text-xs text-gray-400 ml-auto" id="asnPageInfo">Memuat...</span>
                         </div>
 
@@ -1871,6 +1872,45 @@
             aktivasiAsnState.instansi = document.getElementById('filterInstansiAsn')?.value || '';
             aktivasiAsnState.unit = document.getElementById('filterUnitAsn')?.value || '';
             loadAktivasiAsnPage(0);
+        }
+
+        async function exportAktivasiAsnExcel() {
+            showLoader('Menyiapkan data export...');
+            try {
+                // Query sama seperti filter aktif, ambil max 5000 baris
+                let query = db.from('v_aktivasi_asn').select('tgl, cif, nama_cif, hp_cif, instansi, nama_unit, no_rek, status_aktivasi, ket_aktivasi, nama_fasilitator').order('cif');
+                if (aktivasiAsnState.instansi) query = query.eq('instansi', aktivasiAsnState.instansi);
+                if (aktivasiAsnState.unit) query = query.eq('nama_unit', aktivasiAsnState.unit);
+                query = query.limit(5000);
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                // Format data untuk Excel
+                const rows = (data || []).map((r, i) => ({
+                    'No': i + 1,
+                    'Tgl': r.tgl || '',
+                    'CIF': r.cif || '',
+                    'Nama': r.nama_cif || '',
+                    'No HP': r.hp_cif || '',
+                    'Instansi': r.instansi || '',
+                    'Unit Kerja': r.nama_unit || '',
+                    'No Rekening': r.no_rek || '',
+                    'Status': r.status_aktivasi || '',
+                    'Keterangan': r.ket_aktivasi || '',
+                    'Fasilitator': r.nama_fasilitator || ''
+                }));
+
+                // Generate Excel pakai XLSX library
+                const ws = XLSX.utils.json_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Aktivasi ASN');
+                const fileName = 'Aktivasi_ASN_' + getLocalYMD() + '.xlsx';
+                XLSX.writeFile(wb, fileName, { bookType: 'xlsx', type: 'binary' });
+
+                hideLoader();
+                showToast(`Export ${rows.length} data berhasil!`);
+            } catch (err) { hideLoader(); alert('Gagal export: ' + err.message); }
         }
 
         function resetFilterAktivasiAsn() {

@@ -1,3 +1,4 @@
+- [Project overview](project-overview.md) — ringkasan lengkap JConnect Monitor: arsitektur, tabel, fitur, cara melanjutkan
 - [Git workflow setelah perubahan](git-workflow-after-changes.md) — setelah semua file selesai dan diverifikasi, langsung git add, commit, push ke main
 - [Project credentials](project-credentials.md) — lokasi semua credential (Supabase URL, keys, PAT, GitHub remote) di .env
 - [Project setup daily automation](project-setup-daily-automation.md) — JConnect Monitor: .dtf update, rtopcb, autoupload, Task Scheduler, Supabase, GitHub Pages

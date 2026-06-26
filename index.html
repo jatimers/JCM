@@ -179,7 +179,8 @@
 
                 users = (usersRes.data || []).map(r => ({
                     id: r.id, namaUnit: r.nama_unit, namaUser: r.nama_user,
-                    role: r.role, userEstim: r.user_estim || '', password: r.password
+                    role: r.role, userEstim: r.user_estim || '', password: r.password,
+                    kodeCabang: r.kode_cabang || '', kodeExt: r.kode_ext || ''
                 }));
 
                 customers = (customersData || [])
@@ -294,7 +295,7 @@
                     <div class="text-xs sm:text-sm text-gray-500 hidden md:block" id="currentDate"></div>
                 </div>
             </header>
-            <main class="flex-1 overflow-y-auto p-4 sm:p-6" id="mainContent"></main>
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-6" id="mainContent"></main>
         </div>
     </div>
 
@@ -330,7 +331,20 @@
             <form id="userForm" onsubmit="saveUserData(event)" class="space-y-4">
                 <input type="hidden" id="user_mode">
                 <div><label class="block text-sm mb-1">Kode User / Cabang ID</label><input type="text" id="user_id" class="w-full border rounded px-3 py-2" required></div>
-                <div><label class="block text-sm mb-1">Nama Unit Kerja</label><input type="text" id="user_unit" class="w-full border rounded px-3 py-2" placeholder="Contoh: Cabang Lumajang" required></div>
+                <div><label class="block text-sm mb-1">Nama Unit Kerja</label><select id="user_unit" class="w-full border rounded px-3 py-2" required>
+                    <option value="">-- Pilih Unit Kerja --</option>
+                    <option value="Cabang Lumajang">Cabang Lumajang</option>
+                    <option value="Capem Pasirian">Capem Pasirian</option>
+                    <option value="Capem Sukodono">Capem Sukodono</option>
+                    <option value="Capem Pronojiwo">Capem Pronojiwo</option>
+                    <option value="Capem Yosowilangun">Capem Yosowilangun</option>
+                    <option value="KF Senduro">KF Senduro</option>
+                    <option value="KF Pemda">KF Pemda</option>
+                    <option value="KF Klakah">KF Klakah</option>
+                    <option value="KF Jatiroto">KF Jatiroto</option>
+                    <option value="KF RSUD Haryoto">KF RSUD Haryoto</option>
+                    <option value="KF Tempursari">KF Tempursari</option>
+                </select></div>
                 <div><label class="block text-sm mb-1">Nama Pengguna (User)</label><input type="text" id="user_nama" class="w-full border rounded px-3 py-2" placeholder="Contoh: Budi Santoso" required></div>
                 <div>
                     <label class="block text-sm mb-1">Role Akses</label>
@@ -340,6 +354,10 @@
                         <option value="fasilitator">Fasilitator</option>
                         <option value="admin">Administrator</option>
                     </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-sm mb-1">Kode Cabang (3 digit)</label><input type="text" id="user_kode_cabang" class="w-full border rounded px-3 py-2" placeholder="009" maxlength="3"></div>
+                    <div><label class="block text-sm mb-1">Kode EXT (7 digit)</label><input type="text" id="user_kode_ext" class="w-full border rounded px-3 py-2" placeholder="0090000" maxlength="7"></div>
                 </div>
                 <div><label class="block text-sm mb-1">User Estim (Pisahkan koma)</label><input type="text" id="user_estim" class="w-full border rounded px-3 py-2" placeholder="Contoh: JTM009SP01"></div>
                 <div><label class="block text-sm mb-1">Password</label><input type="text" id="user_pwd" class="w-full border rounded px-3 py-2" required></div>
@@ -409,6 +427,7 @@
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
                 { id: 'upload_data', icon: 'fa-upload', label: 'Upload Data Nasabah' },
                 { id: 'edit_nasabah', icon: 'fa-users', label: 'Data Nasabah' },
+                { id: 'aktivasi_asn', icon: 'fa-id-card', label: 'Aktivasi ASN' },
                 { id: 'manage_products', icon: 'fa-box', label: 'Kelola Produk' },
                 { id: 'manage_users', icon: 'fa-user-cog', label: 'Kelola User' },
                 { id: 'laporan_admin', icon: 'fa-file-alt', label: 'Laporan Aktivasi' },
@@ -418,17 +437,20 @@
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
                 { id: 'upload_data', icon: 'fa-upload', label: 'Upload Data Nasabah' },
                 { id: 'edit_nasabah', icon: 'fa-users', label: 'Data Nasabah' },
+                { id: 'aktivasi_asn', icon: 'fa-id-card', label: 'Aktivasi ASN' },
                 { id: 'manage_products', icon: 'fa-box', label: 'Kelola Produk' },
                 { id: 'laporan_admin', icon: 'fa-file-alt', label: 'Laporan Aktivasi' },
                 { id: 'pengaturan_wa', icon: 'fa-cogs', label: 'Pengaturan WA' }
             ],
             supervisor: [
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
+                { id: 'aktivasi_asn', icon: 'fa-id-card', label: 'Aktivasi ASN' },
                 { id: 'laporan_admin', icon: 'fa-file-alt', label: 'Laporan Aktivasi' }
             ],
             user: [
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard Unit' },
                 { id: 'input_aktivasi', icon: 'fa-edit', label: 'Input Aktivasi' },
+                { id: 'aktivasi_asn', icon: 'fa-id-card', label: 'Aktivasi ASN' },
                 { id: 'laporan_user', icon: 'fa-file-alt', label: 'Laporan Unit' }
             ]
         };
@@ -461,6 +483,7 @@
                 case 'manage_products': renderManageProducts(content); break;
                 case 'manage_users': renderManageUsers(content); break;
                 case 'laporan_admin': renderLaporanAdmin(content, currentUser.role); break;
+                case 'aktivasi_asn': renderAktivasiAsn(content); break;
                 case 'input_aktivasi': renderInputAktivasi(content, 'baru'); break;
                 case 'laporan_user': renderLaporanUser(content); break;
                 case 'pengaturan_wa': renderPengaturanWA(content); break;
@@ -821,6 +844,13 @@
 
         function renderInputAktivasi(container, tab = 'baru') {
             currentInputTab = tab;
+
+            // Tab ASN: UI khusus (search, detail, upload)
+            if (tab === 'asn') {
+                renderAsnInputTab(container);
+                return;
+            }
+
             let sourceData = tab === 'baru' ? customers : migrasiData;
             let displayData = sourceData.filter(c => canViewData(c, currentUser));
             if (currentInputFilterDate) displayData = displayData.filter(c => c.date === currentInputFilterDate);
@@ -894,6 +924,7 @@
                     <div class="flex border-b">
                         <button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'baru')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'baru' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500 hover:bg-gray-50'}">Rekening Baru</button>
                         <button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'migrasi')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'migrasi' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500 hover:bg-gray-50'}">Rekening Lama</button>
+                        ${currentUser.role === 'user' ? `<button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'asn')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'asn' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500 hover:bg-gray-50'}">Rekening ASN</button>` : ''}
                     </div>
                     ${formTambahLama}
                     ${filterUI}
@@ -906,6 +937,269 @@
                         </table>
                     </div>
                 </div>`;
+        }
+
+        // ============================================================
+        // INPUT AKTIVASI — TAB REKENING ASN
+        // ============================================================
+        let asnSearchResults = [];
+        let asnSelectedCif = null;
+
+        async function renderAsnInputTab(container) {
+            container.innerHTML = `
+                <div class="bg-white rounded-xl shadow-sm flex flex-col overflow-hidden">
+                    <div class="flex border-b text-xs sm:text-sm">
+                        <button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'baru')" class="w-full py-2.5 sm:py-3 px-1 sm:px-2 font-semibold transition text-gray-500 hover:bg-gray-50">Rek. Baru</button>
+                        <button onclick="renderInputAktivasi(document.getElementById('mainContent'), 'migrasi')" class="w-full py-2.5 sm:py-3 px-1 sm:px-2 font-semibold transition text-gray-500 hover:bg-gray-50">Rek. Lama</button>
+                        <button class="w-full py-2.5 sm:py-3 px-1 sm:px-2 font-semibold transition text-bjGreen border-b-2 border-bjGreen bg-bjLight">Rek. ASN</button>
+                    </div>
+                    <!-- Search bar -->
+                    <div class="p-2 sm:p-3 bg-gray-50 border-b">
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <select id="asnSearchType" class="border rounded px-3 py-2.5 text-sm w-full sm:w-auto">
+                                <option value="nama">Nama</option>
+                                <option value="no_rek">No Rekening</option>
+                                <option value="instansi">Instansi</option>
+                            </select>
+                            <input type="text" id="asnSearchInput" onkeyup="if(event.key==='Enter')searchAsnNasabah()" placeholder="Cari nasabah..." class="flex-1 border rounded px-3 py-2.5 text-sm outline-none focus:border-bjGreen">
+                            <button onclick="searchAsnNasabah()" class="bg-bjGreen text-white px-4 py-2.5 rounded text-sm font-semibold hover:bg-bjGreenDark"><i class="fas fa-search mr-1"></i>Cari</button>
+                        </div>
+                    </div>
+                    <!-- Content area: stacked on mobile, side-by-side on desktop -->
+                    <div class="flex-1 flex flex-col lg:flex-row lg:overflow-hidden" style="min-height:60vh">
+                        <div class="lg:w-5/12 lg:border-r lg:overflow-auto" id="asnSearchResultPanel">
+                            <div class="text-center py-10 text-gray-400 text-sm"><i class="fas fa-search text-3xl mb-2 block"></i>Hasil pencarian tampil di sini</div>
+                        </div>
+                        <div class="lg:w-7/12 lg:overflow-auto bg-gray-50 border-t lg:border-t-0" id="asnDetailPanel">
+                            <div class="text-center py-10 text-gray-400 text-sm"><i class="fas fa-hand-pointer text-3xl mb-2 block"></i>Klik nasabah untuk lihat detail</div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        async function searchAsnNasabah() {
+            const type = document.getElementById('asnSearchType').value;
+            const q = document.getElementById('asnSearchInput').value.trim();
+            if (!q) { alert('Masukkan kata kunci pencarian.'); return; }
+
+            const panel = document.getElementById('asnSearchResultPanel');
+            panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>Mencari...</div>';
+
+            try {
+                let query = db.from('v_aktivasi_asn').select('cif, nama_cif, hp_cif, instansi, no_rek, nama_rek, alamat, status_aktivasi, ket_aktivasi, nama_unit');
+                if (type === 'nama') query = query.ilike('nama_cif', '%' + q + '%');
+                else if (type === 'no_rek') query = query.ilike('no_rek', '%' + q + '%');
+                else if (type === 'instansi') query = query.ilike('instansi', '%' + q + '%');
+                query = query.limit(50);
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                asnSearchResults = data || [];
+                if (asnSearchResults.length === 0) {
+                    panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ditemukan</div>';
+                } else {
+                    panel.innerHTML = `<div class="text-xs text-gray-500 px-3 py-2 bg-gray-100 border-b sticky top-0">Ditemukan ${asnSearchResults.length} data</div>` +
+                        asnSearchResults.map((r, i) => `
+                        <div class="p-3 border-b hover:bg-blue-50 cursor-pointer transition active:bg-blue-100" onclick="showAsnDetail('${r.cif}', ${i})" id="asnRow_${i}">
+                            <div class="font-semibold text-gray-800 text-sm">${r.nama_cif || r.nama_rek || '-'}</div>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-gray-500">
+                                <span class="font-mono">${r.cif}</span>
+                                <span>|</span>
+                                <span class="font-mono">${r.no_rek || '-'}</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded ${r.status_aktivasi==='sudah'?'bg-green-100 text-green-700':r.status_aktivasi==='tidak'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'}">${r.status_aktivasi==='sudah'?'Sudah':r.status_aktivasi==='tidak'?'Tidak Bisa':'Belum'}</span>
+                                <span class="text-[10px] text-gray-400">${r.instansi || '-'}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) { panel.innerHTML = '<div class="text-center py-8 text-red-500">Gagal: ' + err.message + '</div>'; }
+        }
+
+        async function showAsnDetail(cif, index) {
+            asnSelectedCif = cif;
+            // Highlight selected row
+            document.querySelectorAll('[id^="asnRow_"]').forEach(el => el.classList.remove('bg-blue-100', 'border-l-4', 'border-blue-500'));
+            const row = document.getElementById('asnRow_' + index);
+            if (row) row.classList.add('bg-blue-100', 'border-l-4', 'border-blue-500');
+
+            const panel = document.getElementById('asnDetailPanel');
+            panel.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>Memuat detail...</div>';
+
+            try {
+                // Ambil data dari search results
+                const base = asnSearchResults[index];
+                // Ambil semua norek untuk CIF ini
+                const { data: allRek } = await db.from('db_rekening').select('no_rek, nama_rek, kode_ext, kode_cabang_rek').eq('cif', cif).limit(20);
+
+                const rekList = (allRek || []).map(r => r.no_rek).filter(Boolean);
+                const allNorek = rekList.length > 0 ? rekList.join(', ') : (base.no_rek || '-');
+
+                // Ambil data aktivasi yang sudah ada
+                const { data: existing } = await db.from('db_aktivasi_asn').select('*').eq('cif', cif).limit(1);
+                const existingData = (existing && existing.length > 0) ? existing[0] : null;
+
+                const currentStatus = existingData ? (existingData.status_aktivasi || 'belum') : 'belum';
+                const currentKet = existingData ? (existingData.ket_aktivasi || '') : '';
+                const currentFoto = existingData ? (existingData.foto_url || '') : '';
+
+                panel.innerHTML = `
+                    <div class="p-3 sm:p-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-bold text-base sm:text-lg text-gray-800 leading-tight">${base.nama_cif || base.nama_rek || '-'}</h3>
+                            <button onclick="document.getElementById('asnDetailPanel').innerHTML='<div class=\\'text-center py-10 text-gray-400 text-sm\\'><i class=\\'fas fa-hand-pointer text-3xl mb-2 block\\'></i>Klik nasabah untuk lihat detail</div>'" class="text-gray-400 hover:text-gray-600 sm:hidden"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="space-y-1.5 text-xs sm:text-sm mb-4 bg-white rounded p-3 border">
+                            <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">Fasilitator</span><span class="text-gray-700 font-semibold ml-1">${currentUser.namaUser || currentUser.id}</span></div>
+                            <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">Alamat</span><span class="text-gray-700 ml-1">${base.alamat || '-'}</span></div>
+                            <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">No HP</span><span class="text-gray-700 font-semibold ml-1"><a href="tel:${base.hp_cif}" class="text-blue-600">${base.hp_cif || '-'}</a></span></div>
+                            <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">Instansi</span><span class="text-gray-700 ml-1">${base.instansi || '-'}</span></div>
+                            <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">Unit</span><span class="text-gray-700 ml-1">${base.nama_unit || '-'}</span></div>
+                            <div class="flex py-1 border-b border-dashed"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">CIF</span><span class="text-gray-700 font-mono text-xs ml-1">${cif}</span></div>
+                            <div class="flex py-1"><span class="w-20 sm:w-28 text-gray-500 shrink-0 text-xs">No Rek</span><span class="text-gray-700 font-mono text-xs ml-1">${allNorek}</span></div>
+                        </div>
+
+                        <div class="border-t pt-3">
+                            <label class="block text-sm font-semibold mb-2">Status Aktivasi</label>
+                            <select id="asnDetailStatus" onchange="handleAsnStatusChange()" class="w-full border rounded px-3 py-2.5 text-sm mb-3 bg-white">
+                                <option value="belum" ${currentStatus==='belum'?'selected':''}>🔴 Belum aktivasi</option>
+                                <option value="sudah" ${currentStatus==='sudah'?'selected':''}>🟢 Sudah aktivasi</option>
+                                <option value="tidak" ${currentStatus==='tidak'?'selected':''}>🟠 Tidak dapat diaktivasi</option>
+                            </select>
+
+                            <div id="asnKetWrapper" class="${currentStatus==='tidak'?'':'hide'} mb-3">
+                                <label class="block text-sm font-semibold mb-1">Keterangan / Kendala</label>
+                                <textarea id="asnDetailKet" rows="3" class="w-full border rounded px-3 py-2.5 text-sm" placeholder="Tulis alasan tidak dapat diaktivasi..." onblur="saveAsnStatus(asnSelectedCif)">${currentKet}</textarea>
+                            </div>
+
+                            <div id="asnFotoWrapper" class="${currentStatus==='tidak'?'':'hide'} mb-3">
+                                <label class="block text-sm font-semibold mb-2">Upload Bukti Foto</label>
+                                <div class="flex gap-2 mb-3">
+                                    <button type="button" onclick="document.getElementById('asnCameraInput').click()" class="flex-1 bg-blue-500 text-white px-3 py-3 rounded text-sm font-medium hover:bg-blue-600 active:bg-blue-700"><i class="fas fa-camera mr-2"></i>📷 Kamera</button>
+                                    <button type="button" onclick="document.getElementById('asnFileInput').click()" class="flex-1 bg-gray-500 text-white px-3 py-3 rounded text-sm font-medium hover:bg-gray-600 active:bg-gray-700"><i class="fas fa-image mr-2"></i>🖼️ Galeri</button>
+                                    <input type="file" id="asnCameraInput" accept="image/*" capture="environment" onchange="handleAsnPhotoUpload(this)" class="hidden">
+                                    <input type="file" id="asnFileInput" accept="image/*" onchange="handleAsnPhotoUpload(this)" class="hidden">
+                                </div>
+                                <div id="asnFotoPreview" class="mt-2">${currentFoto ? `<img src="${currentFoto}" class="max-w-full rounded shadow" style="max-height:180px" /><span class="text-[10px] text-blue-500 block mt-1">🔗 <a href="${currentFoto}" target="_blank">Lihat full</a></span>` : '<span class="text-xs text-gray-400">📷 Belum ada foto</span>'}</div>
+                                <div id="asnUploadProgress" class="hide mt-2 text-sm text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Mengupload...</div>
+                            </div>
+
+                            <div class="text-[10px] text-gray-400 mt-2 text-center"><i class="fas fa-check-circle text-green-500 mr-1"></i>Auto-save aktif — data tersimpan otomatis</div>
+                        </div>
+                    </div>`;
+            } catch (err) { panel.innerHTML = '<div class="text-center py-8 text-red-500">Gagal: ' + err.message + '</div>'; }
+        }
+
+        function handleAsnStatusChange() {
+            const status = document.getElementById('asnDetailStatus').value;
+            document.getElementById('asnKetWrapper').classList.toggle('hide', status !== 'tidak');
+            document.getElementById('asnFotoWrapper').classList.toggle('hide', status !== 'tidak');
+            // Auto-save on status change
+            saveAsnStatus(asnSelectedCif);
+        }
+
+        // Kompresi gambar client-side sebelum upload
+        async function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                // Kalau sudah kecil (< 300KB), langsung return
+                if (file.size < 300 * 1024) { resolve(file); return; }
+
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    const canvas = document.createElement('canvas');
+                    // Resize: max 1024px, jaga aspect ratio
+                    let w = img.width, h = img.height;
+                    const maxDim = 1024;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                        else { w = Math.round(w * maxDim / h); h = maxDim; }
+                    }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    // Convert ke JPEG, quality 0.65
+                    canvas.toBlob(blob => {
+                        if (blob) {
+                            const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+                            resolve(compressed);
+                        } else { resolve(file); }
+                    }, 'image/jpeg', 0.65);
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+                img.src = url;
+            });
+        }
+
+        async function handleAsnPhotoUpload(input) {
+            if (!input.files || !input.files[0]) return;
+            const originalFile = input.files[0];
+
+            const progressEl = document.getElementById('asnUploadProgress');
+            progressEl.classList.remove('hide');
+            progressEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Memproses foto...';
+
+            try {
+                // Kompresi gambar
+                const file = await compressImage(originalFile);
+                const sizeKB = Math.round(file.size / 1024);
+                progressEl.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i>Mengupload (${sizeKB}KB)...`;
+
+                const fileName = 'asn_' + asnSelectedCif + '_' + Date.now() + '.jpg';
+                const { error } = await db.storage.from('bukti-aktivasi').upload(fileName, file, { cacheControl: '3600', upsert: false, contentType: 'image/jpeg' });
+                if (error) throw error;
+
+                const { data: urlData } = db.storage.from('bukti-aktivasi').getPublicUrl(fileName);
+                const fotoUrl = urlData.publicUrl;
+
+                // Update preview & simpan URL
+                const preview = document.getElementById('asnFotoPreview');
+                preview.innerHTML = `<img src="${fotoUrl}" class="max-w-full rounded shadow" style="max-height:180px" /><span class="text-[10px] text-green-600 block mt-1">✅ Terupload (${sizeKB}KB)</span>`;
+                preview.dataset.fotoUrl = fotoUrl;
+
+                showToast('Foto terupload!');
+                // Auto-save setelah upload
+                await saveAsnStatus(asnSelectedCif);
+            } catch (err) {
+                alert('Gagal upload foto: ' + err.message);
+            }
+            progressEl.classList.add('hide');
+            input.value = '';
+        }
+
+        async function saveAsnStatus(cif) {
+            const status = document.getElementById('asnDetailStatus')?.value || 'belum';
+            const ketEl = document.getElementById('asnDetailKet');
+            const ket = ketEl ? ketEl.value : '';
+            const fotoPreview = document.getElementById('asnFotoPreview');
+            const fotoUrl = (status === 'tidak' && fotoPreview && fotoPreview.dataset.fotoUrl) ? fotoPreview.dataset.fotoUrl : '';
+
+            try {
+                const { data: existing } = await db.from('db_aktivasi_asn').select('id').eq('cif', cif).limit(1);
+                const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '', tgl: getLocalYMD(), fasilitator: currentUser.id };
+                if (fotoUrl) payload.foto_url = fotoUrl;
+                if (status !== 'tidak') { payload.ket_aktivasi = ''; payload.foto_url = null; }
+
+                if (existing && existing.length > 0) {
+                    const { error } = await db.from('db_aktivasi_asn').update(payload).eq('cif', cif);
+                    if (error) throw error;
+                } else {
+                    const { error } = await db.from('db_aktivasi_asn').insert({ cif, fasilitator: currentUser.id, ...payload });
+                    if (error) throw error;
+                }
+
+                showToast('Status tersimpan otomatis ✅');
+
+                // Update search result badge
+                const idx = asnSearchResults.findIndex(r => r.cif === cif);
+                if (idx >= 0) {
+                    asnSearchResults[idx].status_aktivasi = status;
+                    asnSearchResults[idx].ket_aktivasi = status === 'tidak' ? ket : '';
+                }
+            } catch (err) { showToast('Gagal: ' + err.message, true); }
         }
 
         async function autoSaveField(id, field, value, isMigrasi) {
@@ -1105,8 +1399,9 @@
             container.innerHTML = `
                 <div class="bg-white rounded-xl shadow-sm flex flex-col mb-6">
                     <div class="flex border-b">
-                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'baru')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'baru' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Aktivasi Rekening Baru</button>
-                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'migrasi')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'migrasi' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Aktivasi Rekening Existing</button>
+                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'baru')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'baru' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Rekening Baru</button>
+                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'migrasi')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'migrasi' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Rekening Lama</button>
+                        <button onclick="renderLaporanBase(document.getElementById('mainContent'), '${roleContext}', 'asn')" class="w-full py-3 px-2 text-sm font-semibold transition ${tab === 'asn' ? 'text-bjGreen border-b-2 border-bjGreen bg-bjLight' : 'text-gray-500'}">Rekening ASN</button>
                     </div>
                     <div class="p-4 sm:p-6 flex flex-wrap gap-4 items-end justify-between">
                         <div class="flex flex-wrap gap-4 items-end">
@@ -1118,14 +1413,82 @@
                         <button onclick="takeScreenshot('laporanResult', 'Laporan_Aktivasi')" class="bg-indigo-600 text-white px-5 py-2 rounded text-sm shadow hover:bg-indigo-700 transition"><i class="fas fa-camera mr-2"></i>Screenshot</button>
                     </div>
                 </div>
-                <div id="laporanResult" class="hide flex flex-col gap-6 p-1 -m-1"></div>`;
+                <div id="laporanResult" class="hide flex flex-col gap-6 p-1 -m-1 pb-24 sm:pb-6"></div>`;
             generateLaporan(roleContext);
         }
 
-        function generateLaporan(roleContext) {
+        async function generateLaporan(roleContext) {
             const start = document.getElementById('lap_start').value;
             const end = document.getElementById('lap_end').value;
             const branch = document.getElementById('lap_cabang') ? document.getElementById('lap_cabang').value : 'ALL';
+
+            // --- TAB ASN: fetch dari view ---
+            if (currentReportTab === 'asn') {
+                showLoader('Memuat ringkasan...');
+                try {
+                    // Summary: dari SELURUH data (unfiltered), load full view untuk summary per unit
+                    const [totalRes, sudahRes, tidakRes, belumRes, viewSummary] = await Promise.all([
+                        db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }),
+                        db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'sudah'),
+                        db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'tidak'),
+                        db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'belum'),
+                        fetchAllRows('v_aktivasi_asn')
+                    ]);
+
+                    const totalAsn = totalRes.count || 0;
+                    const sudah = sudahRes.count || 0;
+                    const tidak = tidakRes.count || 0;
+                    const belum = belumRes.count || 0;
+                    const persentase = totalAsn === 0 ? 0 : Math.round((sudah / totalAsn) * 100);
+
+                    // Summary per unit dari SELURUH data
+                    const sumMap = {};
+                    (viewSummary || []).forEach(r => {
+                        const unit = r.nama_unit || 'Tidak Dikenal';
+                        if (!sumMap[unit]) sumMap[unit] = { name: unit, total: 0, sdh: 0, blm: 0, tdk: 0 };
+                        sumMap[unit].total++;
+                        if (r.status_aktivasi === 'sudah') sumMap[unit].sdh++;
+                        else if (r.status_aktivasi === 'tidak') sumMap[unit].tdk++;
+                        else sumMap[unit].blm++;
+                    });
+                    const summaryRows = Object.values(sumMap).sort((a,b) => b.total - a.total);
+                    let gTotal = 0, gSdh = 0, gBlm = 0, gTdk = 0;
+                    const summaryRowsHTML = summaryRows.map(s => {
+                        gTotal += s.total; gSdh += s.sdh; gBlm += s.blm; gTdk += s.tdk;
+                        const prc = s.total === 0 ? 0 : Math.round((s.sdh / s.total) * 100);
+                        return `<tr class="border-b"><td class="px-4 py-3 font-bold text-gray-800">${s.name}</td><td class="px-4 py-3 text-center font-medium">${s.total}</td><td class="px-4 py-3 text-center font-semibold text-green-600 bg-green-50">${s.sdh}</td><td class="px-4 py-3 text-center text-red-500">${s.blm}</td><td class="px-4 py-3 text-center text-orange-500">${s.tdk}</td><td class="px-4 py-3 text-center font-bold text-indigo-600 bg-indigo-50">${prc}%</td></tr>`;
+                    }).join('');
+                    const grandPrc = gTotal === 0 ? 0 : Math.round((gSdh / gTotal) * 100);
+                    const totalRowHTML = `<tr class="border-t-2 border-gray-300 bg-gray-200 font-bold text-gray-800"><td class="px-4 py-3 text-right uppercase text-xs">Total Keseluruhan</td><td class="px-4 py-3 text-center">${gTotal}</td><td class="px-4 py-3 text-center text-green-700">${gSdh}</td><td class="px-4 py-3 text-center text-red-700">${gBlm}</td><td class="px-4 py-3 text-center text-orange-700">${gTdk}</td><td class="px-4 py-3 text-center text-indigo-700">${grandPrc}%</td></tr>`;
+
+                    hideLoader();
+
+                    const resHTML = `
+                        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border-t-4 border-t-bjGreen bg-bjLight flex justify-between items-center mb-6">
+                            <div><h3 class="font-bold text-bjGreenDark text-lg">Laporan Aktivasi ASN</h3><p class="text-sm text-gray-600 mt-1">Total ASN: <span class="font-bold text-gray-800">${totalAsn}</span> | Berhasil: <span class="font-bold text-green-700">${sudah}</span></p></div>
+                            <div class="text-right"><div class="text-4xl font-bold text-bjGreen">${persentase}%</div><div class="text-xs font-semibold text-gray-500 tracking-wide uppercase mt-1">Success Rate</div></div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                            <div class="p-4 border-b bg-bjLight"><h3 class="font-bold text-bjGreenDark"><i class="fas fa-chart-bar mr-2"></i>Summary Per Unit Kerja (Seluruh Data)</h3></div>
+                            <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Nama Unit Kerja</th><th class="px-4 py-3 text-center">Total</th><th class="px-4 py-3 text-center text-green-600">Sudah</th><th class="px-4 py-3 text-center text-red-600">Belum</th><th class="px-4 py-3 text-center text-orange-600">Tidak Bisa</th><th class="px-4 py-3 text-center">% Berhasil</th></tr></thead>
+                            <tbody>${summaryRowsHTML}${totalRowHTML}</tbody></table></div>
+                        </div>
+
+                        <div class="flex justify-end mb-4">
+                            <button onclick="takeScreenshot('laporanResult', 'Laporan_ASN')" class="bg-indigo-600 text-white px-5 py-2 rounded text-sm shadow hover:bg-indigo-700 transition"><i class="fas fa-camera mr-2"></i>Screenshot</button>
+                        </div>
+                        <div id="asnLaporanResult"></div>`;
+
+                    document.getElementById('laporanResult').innerHTML = resHTML;
+                    document.getElementById('laporanResult').classList.remove('hide');
+                    // Auto-load detail dengan default (hari ini)
+                    await loadAsnLaporanDetailDefault();
+                } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
+                return;
+            }
+
+            // --- TAB BARU / MIGRASI: existing logic ---
             let rawData = currentReportTab === 'baru' ? customers : migrasiData;
             let data = rawData;
             if (start) data = data.filter(c => c.date >= start);
@@ -1206,8 +1569,68 @@
             document.getElementById('laporanResult').classList.remove('hide');
         }
 
+        async function loadAsnLaporanDetailDefault() {
+            const resultDiv = document.getElementById('asnLaporanResult');
+            resultDiv.innerHTML = '<div class="text-center py-6 text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Memuat data...</div>';
+
+            try {
+                const today = getLocalYMD();
+                let query = db.from('v_aktivasi_asn').select('*', { count: 'exact' })
+                    .gte('tgl', today).lte('tgl', today)
+                    .range(0, 499).order('tgl', { ascending: false });
+
+                const { data, count, error } = await query;
+                if (error) throw error;
+
+                const total = count || 0;
+
+                const rows = (data || []).map((r, i) => {
+                    const statusClass = r.status_aktivasi === 'sudah' ? 'text-green-600' : r.status_aktivasi === 'tidak' ? 'text-orange-600' : 'text-red-600';
+                    const statusLabel = r.status_aktivasi === 'sudah' ? 'Sudah' : r.status_aktivasi === 'tidak' ? 'Tidak Bisa' : 'Belum';
+                    return `<tr class="border-b rincian-row hover:bg-blue-50 cursor-pointer transition" data-unit="${r.nama_unit || '-'}" onclick="showAsnTableDetail('${r.cif}')">
+                        <td class="px-4 py-3 text-xs text-gray-500">${r.tgl ? formatDate(r.tgl) : '-'}</td>
+                        <td class="px-4 py-3 text-xs font-bold text-indigo-600">${r.nama_unit || '-'}</td>
+                        <td class="px-4 py-3 text-xs text-gray-600">${r.instansi || '-'}</td>
+                        <td class="px-4 py-3 font-mono text-xs">${r.no_rek || r.cif || '-'}</td>
+                        <td class="px-4 py-3"><div class="font-semibold text-gray-800">${r.nama_cif || r.nama_rek || '-'}</div><div class="text-xs text-gray-500">${r.hp_cif || '-'}</div></td>
+                        <td class="px-4 py-3 text-xs text-gray-600">${r.nama_fasilitator || '-'}</td>
+                        <td class="px-4 py-3 font-semibold ${statusClass}">${statusLabel}</td>
+                        <td class="px-4 py-3 text-xs text-gray-600 max-w-[150px] truncate" title="${r.ket_aktivasi || ''}">${r.ket_aktivasi || '-'}</td>
+                    </tr>`;
+                }).join('') || '<tr><td colspan="8" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada data</td></tr>';
+
+                resultDiv.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50">
+                            <h3 class="font-bold text-gray-700"><i class="fas fa-list text-gray-400 mr-2"></i>Rincian Data (<span id="rincianCount">${total > 500 ? 500 : total}</span> Baris${total > 500 ? ', tampil 500 teratas' : ''})</h3>
+                        </div>
+                            ${total > 500 ? '<span class="text-xs text-orange-500"><i class="fas fa-exclamation-triangle mr-1"></i>Data banyak, persempit filter</span>' : ''}
+                        </div>
+                        <div class="overflow-x-auto"><table class="w-full text-sm text-left whitespace-nowrap"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">Tgl</th><th class="px-4 py-3">Unit Kerja</th><th class="px-4 py-3">Instansi</th><th class="px-4 py-3">No Rek</th><th class="px-4 py-3">Nama & HP</th><th class="px-4 py-3">Fasilitator</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Keterangan</th></tr></thead>
+                        <tbody>${rows}</tbody></table></div>
+                    </div>`;
+            } catch (err) {
+                resultDiv.innerHTML = '<div class="text-center py-6 text-red-500">Gagal: ' + err.message + '</div>';
+            }
+        }
+
         function filterRincianData(unit) {
             const rows = document.querySelectorAll('.rincian-row');
+            let visibleCount = 0;
+            rows.forEach(row => {
+                if (unit === 'ALL' || row.getAttribute('data-unit') === unit) { row.classList.remove('hide'); visibleCount++; }
+                else { row.classList.add('hide'); }
+            });
+            const countSpan = document.getElementById('rincianCount');
+            if (countSpan) countSpan.innerText = visibleCount;
+        }
+
+        function filterRincianDataAsn(selectEl) {
+            const unit = selectEl.value;
+            // Cari container asnLaporanResult (naik dari select)
+            const container = selectEl.closest('#asnLaporanResult') || document.getElementById('asnLaporanResult');
+            if (!container) return;
+            const rows = container.querySelectorAll('.rincian-row');
             let visibleCount = 0;
             rows.forEach(row => {
                 if (unit === 'ALL' || row.getAttribute('data-unit') === unit) { row.classList.remove('hide'); visibleCount++; }
@@ -1224,12 +1647,12 @@
             container.innerHTML = `
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden max-w-5xl">
                     <div class="px-4 py-4 border-b bg-gray-50 flex justify-between items-center"><h3 class="font-semibold text-gray-700">Manajemen User</h3><button onclick="openUserModal()" class="bg-bjGreen text-white px-3 py-2 rounded text-sm"><i class="fas fa-plus mr-2"></i>Tambah</button></div>
-                    <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">ID (Kode)</th><th class="px-4 py-3">Nama Unit</th><th class="px-4 py-3">Nama User</th><th class="px-4 py-3">Role</th><th class="px-4 py-3">Estim</th><th class="px-4 py-3 text-center">Aksi</th></tr></thead><tbody id="userTableBody">${generateUserTableRows()}</tbody></table></div>
+                    <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr><th class="px-4 py-3">ID (Kode)</th><th class="px-4 py-3">Nama Unit</th><th class="px-4 py-3">Nama User</th><th class="px-4 py-3">Role</th><th class="px-4 py-3">Kode Cab</th><th class="px-4 py-3">Kode EXT</th><th class="px-4 py-3">Estim</th><th class="px-4 py-3 text-center">Aksi</th></tr></thead><tbody id="userTableBody">${generateUserTableRows()}</tbody></table></div>
                 </div>`;
         }
 
         function generateUserTableRows() {
-            return users.map(u => `<tr class="border-b"><td class="px-4 py-3 font-mono font-semibold">${u.id}</td><td class="px-4 py-3 text-gray-800">${u.namaUnit}</td><td class="px-4 py-3 text-gray-600">${u.namaUser}</td><td class="px-4 py-3"><span class="px-2 py-1 text-xs font-semibold rounded ${u.role==='admin'?'bg-red-100 text-red-800':u.role==='supervisor'?'bg-yellow-100 text-yellow-800':u.role==='fasilitator'?'bg-purple-100 text-purple-800':'bg-blue-100 text-blue-800'}">${u.role.toUpperCase()}</span></td><td class="px-4 py-3 text-xs">${u.userEstim || '-'}</td><td class="px-4 py-3 text-center"><button onclick="openUserModal('${u.id}')" class="text-blue-500 mr-3 hover:text-blue-700"><i class="fas fa-edit"></i></button>${u.id !== 'ADMIN' ? `<button onclick="deleteUser('${u.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>` : ''}</td></tr>`).join('');
+            return users.map(u => `<tr class="border-b"><td class="px-4 py-3 font-mono font-semibold">${u.id}</td><td class="px-4 py-3 text-gray-800">${u.namaUnit}</td><td class="px-4 py-3 text-gray-600">${u.namaUser}</td><td class="px-4 py-3"><span class="px-2 py-1 text-xs font-semibold rounded ${u.role==='admin'?'bg-red-100 text-red-800':u.role==='supervisor'?'bg-yellow-100 text-yellow-800':u.role==='fasilitator'?'bg-purple-100 text-purple-800':'bg-blue-100 text-blue-800'}">${u.role.toUpperCase()}</span></td><td class="px-4 py-3 font-mono text-xs">${u.kodeCabang || '-'}</td><td class="px-4 py-3 font-mono text-xs">${u.kodeExt || '-'}</td><td class="px-4 py-3 text-xs">${u.userEstim || '-'}</td><td class="px-4 py-3 text-center"><button onclick="openUserModal('${u.id}')" class="text-blue-500 mr-3 hover:text-blue-700"><i class="fas fa-edit"></i></button>${u.id !== 'ADMIN' ? `<button onclick="deleteUser('${u.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>` : ''}</td></tr>`).join('');
         }
 
         function openUserModal(id = null) {
@@ -1242,6 +1665,8 @@
                 document.getElementById('user_unit').value = u.namaUnit || '';
                 document.getElementById('user_nama').value = u.namaUser || '';
                 document.getElementById('user_role').value = u.role;
+                document.getElementById('user_kode_cabang').value = u.kodeCabang || '';
+                document.getElementById('user_kode_ext').value = u.kodeExt || '';
                 document.getElementById('user_estim').value = u.userEstim || '';
                 document.getElementById('user_pwd').value = u.password;
             } else {
@@ -1260,6 +1685,8 @@
                 nama_unit: document.getElementById('user_unit').value.trim(),
                 nama_user: document.getElementById('user_nama').value.trim(),
                 role: document.getElementById('user_role').value,
+                kode_cabang: document.getElementById('user_kode_cabang').value.trim(),
+                kode_ext: document.getElementById('user_kode_ext').value.trim(),
                 user_estim: document.getElementById('user_estim').value.trim(),
                 password: document.getElementById('user_pwd').value
             };
@@ -1268,12 +1695,12 @@
                 if (mode === 'add') {
                     const { error } = await db.from('users').insert(data);
                     if (error) throw error;
-                    users.push({ id: data.id, namaUnit: data.nama_unit, namaUser: data.nama_user, role: data.role, userEstim: data.user_estim, password: data.password });
+                    users.push({ id: data.id, namaUnit: data.nama_unit, namaUser: data.nama_user, role: data.role, kodeCabang: data.kode_cabang, kodeExt: data.kode_ext, userEstim: data.user_estim, password: data.password });
                 } else {
                     const { error } = await db.from('users').update(data).eq('id', data.id);
                     if (error) throw error;
                     let idx = users.findIndex(u => u.id == data.id);
-                    if (idx > -1) users[idx] = { id: data.id, namaUnit: data.nama_unit, namaUser: data.nama_user, role: data.role, userEstim: data.user_estim, password: data.password };
+                    if (idx > -1) users[idx] = { id: data.id, namaUnit: data.nama_unit, namaUser: data.nama_user, role: data.role, kodeCabang: data.kode_cabang, kodeExt: data.kode_ext, userEstim: data.user_estim, password: data.password };
                 }
                 hideLoader();
                 document.getElementById('userModal').classList.add('hide');
@@ -1290,6 +1717,318 @@
                 users = users.filter(u => u.id != id);
                 hideLoader();
                 if (currentView === 'manage_users') document.getElementById('userTableBody').innerHTML = generateUserTableRows();
+            } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
+        }
+
+        // ============================================================
+        // AKTIVASI ASN
+        // ============================================================
+        let aktivasiAsnState = { page: 0, pageSize: 50, total: 0, instansi: '', unit: '' };
+
+        async function renderAktivasiAsn(container) {
+            showLoader('Memuat Data Aktivasi ASN...');
+            try {
+                // Summary & filter: pakai count query (hindari limit 1000 Supabase)
+                const [totalRes, sudahRes, tidakRes, belumRes] = await Promise.all([
+                    db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }),
+                    db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'sudah'),
+                    db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'tidak'),
+                    db.from('db_aktivasi_asn').select('*', { count: 'exact', head: true }).eq('status_aktivasi', 'belum')
+                ]);
+
+                const totalAsn = totalRes.count || 0;
+                const sudah = sudahRes.count || 0;
+                const tidak = tidakRes.count || 0;
+                const belum = belumRes.count || 0;
+
+                // Instansi list: load semua dari view (pakai fetchAllRows hindari limit)
+                const allViewData = await fetchAllRows('v_aktivasi_asn');
+                const instansiList = [...new Set(allViewData.map(x => x.instansi).filter(Boolean))].sort();
+
+                // Unit list: distinct nama_unit dari view (sama seperti laporan)
+                const unitList = [...new Set(allViewData.map(u => u.nama_unit).filter(Boolean))]
+                    .filter(u => u !== 'Tidak Dikenal')
+                    .sort()
+                    .map(nama => ({ nama_unit: nama }));
+
+                aktivasiAsnState.instansiList = instansiList;
+                aktivasiAsnState.unitList = unitList;
+
+                hideLoader();
+                container.innerHTML = `
+                    <div id="aktivasiAsnContent">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+                                <div class="text-sm text-gray-500 uppercase font-semibold">Sudah Aktivasi</div>
+                                <div class="text-3xl font-bold text-green-600 mt-1">${sudah}</div>
+                                <div class="text-xs text-gray-400 mt-1">${totalAsn ? Math.round(sudah/totalAsn*100) : 0}% dari ${totalAsn} ASN</div>
+                            </div>
+                            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-orange-500">
+                                <div class="text-sm text-gray-500 uppercase font-semibold">Belum Aktivasi</div>
+                                <div class="text-3xl font-bold text-orange-600 mt-1">${belum}</div>
+                                <div class="text-xs text-gray-400 mt-1">${totalAsn ? Math.round(belum/totalAsn*100) : 0}% dari ${totalAsn} ASN</div>
+                            </div>
+                            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
+                                <div class="text-sm text-gray-500 uppercase font-semibold">Tidak Bisa Aktivasi</div>
+                                <div class="text-3xl font-bold text-red-600 mt-1">${tidak}</div>
+                                <div class="text-xs text-gray-400 mt-1">${totalAsn ? Math.round(tidak/totalAsn*100) : 0}% dari ${totalAsn} ASN</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-sm p-4 mb-4 flex flex-wrap items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <label class="text-sm font-semibold text-gray-600"><i class="fas fa-building mr-1"></i>Instansi</label>
+                                <select id="filterInstansiAsn" onchange="applyFilterAktivasiAsn()" class="border rounded px-3 py-2 text-sm min-w-[200px]">
+                                    <option value="">Semua Instansi</option>
+                                    ${instansiList.map(i => `<option value="${i}">${i}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-sm font-semibold text-gray-600"><i class="fas fa-sitemap mr-1"></i>Unit Kerja</label>
+                                <select id="filterUnitAsn" onchange="applyFilterAktivasiAsn()" class="border rounded px-3 py-2 text-sm min-w-[180px]">
+                                    <option value="">Semua Unit</option>
+                                    ${unitList.map(u => `<option value="${u.nama_unit}">${u.nama_unit}</option>`).join('')}
+                                </select>
+                            </div>
+                            <button onclick="resetFilterAktivasiAsn()" class="text-xs bg-gray-200 px-3 py-2 rounded hover:bg-gray-300 font-medium"><i class="fas fa-times mr-1"></i>Reset</button>
+                            <button onclick="exportAktivasiAsnExcel()" class="text-xs bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 font-medium"><i class="fas fa-download mr-1"></i>Export Excel</button>
+                            <span class="text-xs text-gray-400 ml-auto" id="asnPageInfo">Memuat...</span>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-3 w-12">No</th>
+                                            <th class="px-4 py-3">NO Rekening</th>
+                                            <th class="px-4 py-3">Nama & HP</th>
+                                            <th class="px-4 py-3">Instansi</th>
+                                            <th class="px-4 py-3">Unit Kerja</th>
+                                            <th class="px-4 py-3 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="asnTableBody"><tr><td colspan="6" class="text-center py-8 text-gray-400">Memuat data...</td></tr></tbody>
+                                </table>
+                            </div>
+                            <div id="asnPagination" class="px-4 py-3 border-t bg-gray-50 flex justify-between items-center"></div>
+                        </div>
+                    </div>`;
+
+                await loadAktivasiAsnPage(0);
+            } catch (err) { hideLoader(); alert('Gagal memuat: ' + err.message); }
+        }
+
+        async function loadAktivasiAsnPage(page) {
+            aktivasiAsnState.page = page;
+            const ps = aktivasiAsnState.pageSize;
+            const start = page * ps;
+            const end = start + ps - 1;
+
+            // Query view dengan filter + paginasi
+            let query = db.from('v_aktivasi_asn').select('*', { count: 'exact' });
+            if (aktivasiAsnState.instansi) query = query.eq('instansi', aktivasiAsnState.instansi);
+            if (aktivasiAsnState.unit) query = query.eq('nama_unit', aktivasiAsnState.unit);
+
+            const { data, count, error } = await query.range(start, end).order('cif');
+            if (error) { alert('Gagal: ' + error.message); return; }
+
+            aktivasiAsnState.total = count || 0;
+            const tbody = document.getElementById('asnTableBody');
+            if (!tbody) return;
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-400"><i class="fas fa-folder-open text-3xl mb-2 block"></i>Tidak ada data</td></tr>';
+            } else {
+                tbody.innerHTML = data.map((r, i) => {
+                    const statusClass = r.status_aktivasi === 'sudah' ? 'bg-green-100 text-green-800' :
+                                       r.status_aktivasi === 'tidak' ? 'bg-red-100 text-red-800' :
+                                       'bg-yellow-100 text-yellow-800';
+                    const statusLabel = r.status_aktivasi === 'sudah' ? 'Sudah' :
+                                       r.status_aktivasi === 'tidak' ? 'Tidak Bisa' : 'Belum';
+                    const rowNum = start + i + 1;
+                    return `<tr class="border-b hover:bg-blue-50 cursor-pointer transition" onclick="showAsnTableDetail('${r.cif}')">
+                        <td class="px-4 py-2 text-center text-xs text-gray-500">${rowNum}</td>
+                        <td class="px-4 py-2 font-mono text-xs">${r.no_rek || r.cif || '-'}</td>
+                        <td class="px-4 py-2"><div class="font-semibold text-gray-800">${r.nama_cif || r.nama_rek || '-'}</div><div class="text-xs text-gray-500">${r.hp_cif || '-'}</div></td>
+                        <td class="px-4 py-2 text-xs text-gray-600 max-w-[200px] truncate" title="${r.instansi || ''}">${r.instansi || '-'}</td>
+                        <td class="px-4 py-2 text-xs font-semibold text-indigo-600">${r.nama_unit || '-'}</td>
+                        <td class="px-4 py-2 text-center"><span class="px-2 py-1 text-xs font-semibold rounded ${statusClass}">${statusLabel}</span></td>
+                    </tr>`;
+                }).join('');
+            }
+
+            const totalPages = Math.ceil(aktivasiAsnState.total / ps) || 1;
+            document.getElementById('asnPageInfo').innerText = `${aktivasiAsnState.total} data | Hal ${page+1}/${totalPages}`;
+            document.getElementById('asnPagination').innerHTML = `
+                <button onclick="loadAktivasiAsnPage(0)" ${page===0?'disabled':''} class="px-3 py-1 text-sm rounded border ${page===0?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-double-left"></i></button>
+                <button onclick="loadAktivasiAsnPage(${page-1})" ${page===0?'disabled':''} class="px-3 py-1 text-sm rounded border ${page===0?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-left"></i></button>
+                <span class="text-xs text-gray-600 px-3">Hal ${page+1} / ${totalPages}</span>
+                <button onclick="loadAktivasiAsnPage(${page+1})" ${page>=totalPages-1?'disabled':''} class="px-3 py-1 text-sm rounded border ${page>=totalPages-1?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-right"></i></button>
+                <button onclick="loadAktivasiAsnPage(${totalPages-1})" ${page>=totalPages-1?'disabled':''} class="px-3 py-1 text-sm rounded border ${page>=totalPages-1?'bg-gray-100 text-gray-400':'bg-white hover:bg-gray-100'}"><i class="fas fa-angle-double-right"></i></button>`;
+        }
+
+        function applyFilterAktivasiAsn() {
+            aktivasiAsnState.instansi = document.getElementById('filterInstansiAsn')?.value || '';
+            aktivasiAsnState.unit = document.getElementById('filterUnitAsn')?.value || '';
+            loadAktivasiAsnPage(0);
+        }
+
+        async function exportAktivasiAsnExcel() {
+            showLoader('Menyiapkan data export...');
+            try {
+                // Query sama seperti filter aktif, ambil max 5000 baris
+                let query = db.from('v_aktivasi_asn').select('tgl, cif, nama_cif, hp_cif, instansi, nama_unit, no_rek, status_aktivasi, ket_aktivasi, nama_fasilitator').order('cif');
+                if (aktivasiAsnState.instansi) query = query.eq('instansi', aktivasiAsnState.instansi);
+                if (aktivasiAsnState.unit) query = query.eq('nama_unit', aktivasiAsnState.unit);
+                query = query.limit(5000);
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                // Format data untuk Excel
+                const rows = (data || []).map((r, i) => ({
+                    'No': i + 1,
+                    'Tgl': r.tgl || '',
+                    'CIF': r.cif || '',
+                    'Nama': r.nama_cif || '',
+                    'No HP': r.hp_cif || '',
+                    'Instansi': r.instansi || '',
+                    'Unit Kerja': r.nama_unit || '',
+                    'No Rekening': r.no_rek || '',
+                    'Status': r.status_aktivasi || '',
+                    'Keterangan': r.ket_aktivasi || '',
+                    'Fasilitator': r.nama_fasilitator || ''
+                }));
+
+                // Generate Excel pakai XLSX library
+                const ws = XLSX.utils.json_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Aktivasi ASN');
+                const fileName = 'Aktivasi_ASN_' + getLocalYMD() + '.xlsx';
+                XLSX.writeFile(wb, fileName, { bookType: 'xlsx', type: 'binary' });
+
+                hideLoader();
+                showToast(`Export ${rows.length} data berhasil!`);
+            } catch (err) { hideLoader(); alert('Gagal export: ' + err.message); }
+        }
+
+        function resetFilterAktivasiAsn() {
+            const fi = document.getElementById('filterInstansiAsn');
+            const fu = document.getElementById('filterUnitAsn');
+            if (fi) fi.value = '';
+            if (fu) fu.value = '';
+            aktivasiAsnState.instansi = '';
+            aktivasiAsnState.unit = '';
+            loadAktivasiAsnPage(0);
+        }
+
+        async function showAsnTableDetail(cif) {
+            showLoader('Memuat detail...');
+            try {
+                // Ambil detail dari view + semua norek dari db_rekening
+                const [{ data: viewData }, { data: rekData }] = await Promise.all([
+                    db.from('v_aktivasi_asn').select('*').eq('cif', cif).limit(1),
+                    db.from('db_rekening').select('no_rek, nama_rek').eq('cif', cif).order('no_rek').limit(30)
+                ]);
+
+                const r = (viewData && viewData.length > 0) ? viewData[0] : null;
+                if (!r) { hideLoader(); alert('Data tidak ditemukan.'); return; }
+
+                const allNorek = (rekData || []).map(x => x.no_rek).filter(Boolean);
+                const norekList = allNorek.length > 0 ? allNorek.join(', ') : (r.no_rek || '-');
+                const fotoUrl = r.foto_url || '';
+
+                hideLoader();
+
+                // Tampilkan modal
+                const modal = document.createElement('div');
+                modal.id = 'asnDetailModal';
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4';
+                modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+
+                const statusBadge = r.status_aktivasi === 'sudah' ? '<span class="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">Sudah</span>' :
+                                   r.status_aktivasi === 'tidak' ? '<span class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">Tidak Bisa</span>' :
+                                   '<span class="px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800">Belum</span>';
+
+                modal.innerHTML = `
+                    <div class="bg-white rounded-t-xl sm:rounded-xl shadow-xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+                        <div class="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center rounded-t-xl z-10">
+                            <h3 class="font-bold text-gray-800 text-sm sm:text-base"><i class="fas fa-id-card text-bjGreen mr-2"></i>Detail ASN</h3>
+                            <button onclick="document.getElementById('asnDetailModal').remove()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div>
+                                <h4 class="font-bold text-base text-gray-800">${r.nama_cif || r.nama_rek || '-'}</h4>
+                                <p class="text-xs text-gray-500 font-mono mt-0.5">CIF: ${cif}</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Fasilitator</span><span class="text-gray-700 text-xs font-semibold">: ${r.nama_fasilitator || '-'}</span></div>
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Alamat</span><span class="text-gray-700 text-xs">: ${r.alamat || '-'}</span></div>
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">No HP</span><span class="text-gray-700 text-xs font-semibold">: <a href="tel:${r.hp_cif}" class="text-blue-600">${r.hp_cif || '-'}</a></span></div>
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Instansi</span><span class="text-gray-700 text-xs">: ${r.instansi || '-'}</span></div>
+                                <div class="flex"><span class="w-24 text-gray-500 shrink-0 text-xs">Unit Kerja</span><span class="text-indigo-600 text-xs font-semibold">: ${r.nama_unit || '-'}</span></div>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <span class="text-xs text-gray-500">No Rekening</span>
+                                <p class="text-xs font-mono text-gray-700 mt-1 break-all">${norekList}</p>
+                            </div>
+                            <div class="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                                <span class="text-xs text-gray-500">Status</span>
+                                ${statusBadge}
+                            </div>
+                            ${r.ket_aktivasi ? `<div class="bg-gray-50 rounded-lg p-3"><span class="text-xs text-gray-500">Keterangan</span><p class="text-xs text-gray-700 mt-1">${r.ket_aktivasi}</p></div>` : ''}
+                            ${fotoUrl ? `<div class="bg-gray-50 rounded-lg p-3"><div class="flex justify-between items-start mb-2"><span class="text-xs text-gray-500">Foto Bukti</span>${currentUser.role === 'admin' ? `<button onclick="deleteAsnFoto('${cif}')" class="text-[10px] text-red-500 hover:text-red-700 bg-red-50 px-2 py-0.5 rounded"><i class="fas fa-trash mr-1"></i>Hapus</button>` : ''}</div><img src="${fotoUrl}" class="w-full rounded shadow max-h-64 object-contain bg-black" onerror="this.style.display='none'" id="asnFotoImg_${cif}" /><a href="${fotoUrl}" target="_blank" class="text-xs text-blue-500 mt-2 inline-block">🔗 Buka full size</a></div>` : ''}
+                            ${currentUser.role === 'admin' ? `
+                            <div class="border-t pt-3 mt-3">
+                                <label class="text-xs font-semibold text-gray-700 mb-2 block"><i class="fas fa-edit text-bjGreen mr-1"></i>Edit Admin</label>
+                                <div class="flex gap-2 items-end">
+                                    <div class="flex-1">
+                                        <select id="adminAsnStatus_${cif}" class="w-full border rounded px-3 py-2 text-sm">
+                                            <option value="belum" ${r.status_aktivasi==='belum'?'selected':''}>Belum</option>
+                                            <option value="sudah" ${r.status_aktivasi==='sudah'?'selected':''}>Sudah</option>
+                                            <option value="tidak" ${r.status_aktivasi==='tidak'?'selected':''}>Tidak Bisa</option>
+                                        </select>
+                                    </div>
+                                    <button onclick="adminSaveAsnStatus('${cif}')" class="bg-bjGreen text-white px-4 py-2 rounded text-sm font-semibold hover:bg-bjGreenDark"><i class="fas fa-save mr-1"></i>Update</button>
+                                </div>
+                                <textarea id="adminAsnKet_${cif}" rows="2" class="w-full border rounded px-3 py-2 text-xs mt-2" placeholder="Keterangan...">${r.ket_aktivasi || ''}</textarea>
+                            </div>` : ''}
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+            } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
+        }
+
+        async function adminSaveAsnStatus(cif) {
+            const status = document.getElementById('adminAsnStatus_' + cif)?.value || 'belum';
+            const ket = document.getElementById('adminAsnKet_' + cif)?.value || '';
+            showLoader('Menyimpan...');
+            try {
+                const payload = { status_aktivasi: status, ket_aktivasi: status === 'tidak' ? ket : '', tgl: getLocalYMD() };
+                const { error } = await db.from('db_aktivasi_asn').update(payload).eq('cif', cif);
+                if (error) throw error;
+                hideLoader();
+                showToast('Status berhasil diupdate!');
+                document.getElementById('asnDetailModal')?.remove();
+                // Refresh tabel
+                loadAktivasiAsnPage(aktivasiAsnState.page);
+            } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
+        }
+
+        async function deleteAsnFoto(cif) {
+            if (!confirm('Hapus foto bukti untuk CIF ' + cif + '?')) return;
+            showLoader('Menghapus foto...');
+            try {
+                const { error } = await db.from('db_aktivasi_asn').update({ foto_url: null }).eq('cif', cif);
+                if (error) throw error;
+                hideLoader();
+                showToast('Foto berhasil dihapus!');
+                // Sembunyikan gambar di modal
+                const img = document.getElementById('asnFotoImg_' + cif);
+                if (img) img.style.display = 'none';
+                // Refresh tabel
+                loadAktivasiAsnPage(aktivasiAsnState.page);
             } catch (err) { hideLoader(); alert('Gagal: ' + err.message); }
         }
 

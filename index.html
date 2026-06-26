@@ -1723,7 +1723,7 @@
         // ============================================================
         // AKTIVASI ASN
         // ============================================================
-        let aktivasiAsnState = { page: 0, pageSize: 50, total: 0, instansi: '', unit: '' };
+        let aktivasiAsnState = { page: 0, pageSize: 50, total: 0, instansi: '', unit: '', statusFilter: '' };
 
         async function renderAktivasiAsn(container) {
             showLoader('Memuat Data Aktivasi ASN...');
@@ -1758,18 +1758,18 @@
                 container.innerHTML = `
                     <div id="aktivasiAsnContent">
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
-                                <div class="text-sm text-gray-500 uppercase font-semibold">Sudah Aktivasi</div>
+                            <div id="cardSudah" class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500 cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-200" onclick="filterAsnByStatus('sudah')">
+                                <div class="text-sm text-gray-500 uppercase font-semibold flex items-center gap-2">Sudah Aktivasi <i class="fas fa-search text-xs text-gray-300"></i></div>
                                 <div class="text-3xl font-bold text-green-600 mt-1">${sudah}</div>
                                 <div class="text-xs text-gray-400 mt-1">${totalAsn ? Math.round(sudah/totalAsn*100) : 0}% dari ${totalAsn} ASN</div>
                             </div>
-                            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-orange-500">
-                                <div class="text-sm text-gray-500 uppercase font-semibold">Belum Aktivasi</div>
+                            <div id="cardBelum" class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-orange-500 cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-200" onclick="filterAsnByStatus('belum')">
+                                <div class="text-sm text-gray-500 uppercase font-semibold flex items-center gap-2">Belum Aktivasi <i class="fas fa-search text-xs text-gray-300"></i></div>
                                 <div class="text-3xl font-bold text-orange-600 mt-1">${belum}</div>
                                 <div class="text-xs text-gray-400 mt-1">${totalAsn ? Math.round(belum/totalAsn*100) : 0}% dari ${totalAsn} ASN</div>
                             </div>
-                            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
-                                <div class="text-sm text-gray-500 uppercase font-semibold">Tidak Bisa Aktivasi</div>
+                            <div id="cardTidak" class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500 cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-200" onclick="filterAsnByStatus('tidak')">
+                                <div class="text-sm text-gray-500 uppercase font-semibold flex items-center gap-2">Tidak Bisa Aktivasi <i class="fas fa-search text-xs text-gray-300"></i></div>
                                 <div class="text-3xl font-bold text-red-600 mt-1">${tidak}</div>
                                 <div class="text-xs text-gray-400 mt-1">${totalAsn ? Math.round(tidak/totalAsn*100) : 0}% dari ${totalAsn} ASN</div>
                             </div>
@@ -1791,6 +1791,7 @@
                                 </select>
                             </div>
                             <button onclick="resetFilterAktivasiAsn()" class="text-xs bg-gray-200 px-3 py-2 rounded hover:bg-gray-300 font-medium"><i class="fas fa-times mr-1"></i>Reset</button>
+                            <span id="statusFilterBadge" class="hidden text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium cursor-pointer" onclick="filterAsnByStatus(aktivasiAsnState.statusFilter)" title="Klik untuk hapus filter status"><span id="statusFilterLabel"></span> <i class="fas fa-times ml-1 text-blue-400"></i></span>
                             <button onclick="exportAktivasiAsnExcel()" class="text-xs bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600 font-medium"><i class="fas fa-download mr-1"></i>Export Excel</button>
                             <span class="text-xs text-gray-400 ml-auto" id="asnPageInfo">Memuat...</span>
                         </div>
@@ -1829,6 +1830,7 @@
             let query = db.from('v_aktivasi_asn').select('*', { count: 'exact' });
             if (aktivasiAsnState.instansi) query = query.eq('instansi', aktivasiAsnState.instansi);
             if (aktivasiAsnState.unit) query = query.eq('nama_unit', aktivasiAsnState.unit);
+            if (aktivasiAsnState.statusFilter) query = query.eq('status_aktivasi', aktivasiAsnState.statusFilter);
 
             const { data, count, error } = await query.range(start, end).order('cif');
             if (error) { alert('Gagal: ' + error.message); return; }
@@ -1920,7 +1922,60 @@
             if (fu) fu.value = '';
             aktivasiAsnState.instansi = '';
             aktivasiAsnState.unit = '';
+            aktivasiAsnState.statusFilter = '';
+            clearCardHighlights();
+            updateStatusFilterBadge();
             loadAktivasiAsnPage(0);
+        }
+
+        function filterAsnByStatus(status) {
+            // Toggle: klik ulang status yang sama = hapus filter
+            if (aktivasiAsnState.statusFilter === status) {
+                aktivasiAsnState.statusFilter = '';
+            } else {
+                aktivasiAsnState.statusFilter = status;
+            }
+            highlightActiveCard();
+            updateStatusFilterBadge();
+            loadAktivasiAsnPage(0);
+        }
+
+        function highlightActiveCard() {
+            const active = aktivasiAsnState.statusFilter;
+            ['sudah', 'belum', 'tidak'].forEach(s => {
+                const idMap = { sudah: 'cardSudah', belum: 'cardBelum', tidak: 'cardTidak' };
+                const card = document.getElementById(idMap[s]);
+                if (!card) return;
+                if (active === s) {
+                    card.classList.add('ring-2', 'ring-offset-2');
+                    if (s === 'sudah') card.classList.add('ring-green-400');
+                    else if (s === 'belum') card.classList.add('ring-orange-400');
+                    else card.classList.add('ring-red-400');
+                } else {
+                    card.classList.remove('ring-2', 'ring-offset-2', 'ring-green-400', 'ring-orange-400', 'ring-red-400');
+                }
+            });
+        }
+
+        function clearCardHighlights() {
+            ['cardSudah', 'cardBelum', 'cardTidak'].forEach(id => {
+                const card = document.getElementById(id);
+                if (card) card.classList.remove('ring-2', 'ring-offset-2', 'ring-green-400', 'ring-orange-400', 'ring-red-400');
+            });
+        }
+
+        function updateStatusFilterBadge() {
+            const badge = document.getElementById('statusFilterBadge');
+            const label = document.getElementById('statusFilterLabel');
+            if (!badge || !label) return;
+            const status = aktivasiAsnState.statusFilter;
+            if (status) {
+                const labelMap = { sudah: 'Sudah Aktivasi', belum: 'Belum Aktivasi', tidak: 'Tidak Bisa Aktivasi' };
+                label.innerText = labelMap[status] || status;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
         }
 
         async function showAsnTableDetail(cif) {

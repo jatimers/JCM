@@ -1,0 +1,27 @@
+{
+  "name": "jcm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "auto_upload.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jatimers/JCM.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jatimers/JCM/issues"
+  },
+  "homepage": "https://github.com/jatimers/JCM#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "dotenv": "^17.4.2",
+    "pg": "^8.22.0",
+    "xlsx": "^0.18.5"
+  }
+}

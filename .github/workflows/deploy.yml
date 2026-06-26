@@ -26,9 +26,11 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
+        env:
+          CLOUDFLARE_ACCOUNT_ID: d4b4f2e5e95b093244402dfbcc2a1156
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: pages deploy . --project-name=jconnect-monitor --commit-dirty=true
+          command: pages deploy . --project-name=jconnect-monitor
 
   # ============================================================
   # Deploy ke GitHub Pages (BACKUP)

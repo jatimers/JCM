@@ -2164,7 +2164,7 @@
                     <div class="bg-white rounded-xl shadow-sm overflow-hidden border-t-4 border-bjGreen">
                         <div class="px-4 py-4 border-b bg-gray-50 flex items-center">
                             <i class="fab fa-whatsapp text-green-500 text-xl mr-3"></i>
-                            <h3 class="font-bold text-gray-700">Pengaturan Notifikasi WA (Fonnte)</h3>
+                            <h3 class="font-bold text-gray-700">Pengaturan Notifikasi WA (Gateway)</h3>
                         </div>
                         <div class="p-6">
                             <form onsubmit="saveWaSettings(event)" class="space-y-5">
@@ -2179,7 +2179,7 @@
                                         <div class="ml-3 text-sm font-bold w-16" id="wa_status_label" style="color: ${status === 'ON' ? '#005C3A' : '#6b7280'}">${status === 'ON' ? 'AKTIF' : 'NONAKTIF'}</div>
                                     </label>
                                 </div>
-                                <div><label class="block text-sm font-bold mb-1 text-gray-700">Token Fonnte</label><input type="text" id="wa_token" value="${token}" class="w-full border rounded-lg px-4 py-2 text-sm focus:border-bjGreen outline-none transition" placeholder="Masukkan Token API Fonnte"></div>
+                                <div><label class="block text-sm font-bold mb-1 text-gray-700">API Key WA Gateway</label><input type="text" id="wa_token" value="${token}" class="w-full border rounded-lg px-4 py-2 text-sm focus:border-bjGreen outline-none transition" placeholder="Masukkan X-API-Key WA Gateway"></div>
                                 <div><label class="block text-sm font-bold mb-1 text-gray-700">No HP / ID Group Target</label><input type="text" id="wa_target" value="${target}" class="w-full border rounded-lg px-4 py-2 text-sm focus:border-bjGreen outline-none transition" placeholder="Contoh: 0812xxx atau 1203xxx-group"></div>
                                 <div class="pt-4 border-t flex justify-end">
                                     <button type="submit" class="bg-bjGreen text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-bjGreenDark transition"><i class="fas fa-save mr-2"></i>Simpan Pengaturan</button>
@@ -2258,10 +2258,10 @@
             const status = appSettings.WA_STATUS || 'OFF';
             if (status !== 'ON' || !token || !target) return 'Disabled';
             try {
-                const resp = await fetch('https://api.fonnte.com/send', {
+                const resp = await fetch('https://wa.matradata.com/api/v1/send-message', {
                     method: 'POST',
-                    headers: { 'Authorization': token, 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ target, message: pesan })
+                    headers: { 'X-API-Key': token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to: target, text: pesan })
                 });
                 const text = await resp.text();
                 return text;

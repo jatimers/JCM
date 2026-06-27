@@ -237,13 +237,13 @@ async function sendWaNotification(supabase, count) {
     const pesan = `*Notifikasi JConnect Monitor*\n\nSudah dilakukan upload *${count} data Rekening Baru* ke dalam sistem. Silahkan cek aplikasi JConnect Monitor untuk update Data Aktivasi JConnect hari ini, Terima Kasih 🙏🏻.\n\n_from JCMonitor Apps (Auto)_`;
 
     log('  Mengirim notifikasi WA...');
-    const resp = await fetch('https://api.fonnte.com/send', {
+    const resp = await fetch('https://wa.matradata.com/api/v1/send-message', {
         method: 'POST',
         headers: {
-            'Authorization': token,
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'X-API-Key': token,
+            'Content-Type': 'application/json'
         },
-        body: new URLSearchParams({ target, message: pesan })
+        body: JSON.stringify({ to: target, text: pesan })
     });
 
     const text = await resp.text();

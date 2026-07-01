@@ -2,3 +2,4 @@
 - [Git workflow setelah perubahan](git-workflow-after-changes.md) — setelah semua file selesai dan diverifikasi, langsung git add, commit, push ke main
 - [Project credentials](project-credentials.md) — lokasi semua credential (Supabase URL, keys, PAT, GitHub remote) di .env
 - [Project setup daily automation](project-setup-daily-automation.md) — JConnect Monitor: .dtf update, rtopcb, autoupload, Task Scheduler, Supabase, GitHub Pages
+- [Hide import data by role](hide-import-data-role.md) — tombol Import Data di tab Rekening Baru hanya muncul untuk admin dan fasilitator

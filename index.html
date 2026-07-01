@@ -862,11 +862,12 @@
                     <div class="flex items-center space-x-3 flex-wrap gap-y-2 justify-start lg:justify-end w-full lg:w-auto">
                         <div class="flex items-center"><input type="text" value="${currentInputSearchTerm}" onkeyup="changeInputSearch(this.value)" placeholder="Cari Nama/No Rek..." class="border rounded px-3 py-1.5 text-sm w-48 sm:w-64 outline-none focus:border-bjGreen"></div>
                         <div class="flex items-center border-l pl-3"><input type="date" value="${currentInputFilterDate}" class="border rounded px-3 py-1.5 text-sm outline-none focus:border-bjGreen" onchange="changeInputFilterDate(this.value)"><button onclick="changeInputFilterDate('')" class="text-xs bg-gray-200 px-3 py-2 rounded ml-2 hover:bg-gray-300 font-medium">Reset</button></div>
+                        ${(currentUser.role === 'admin' || currentUser.role === 'fasilitator') ? `
                         <div class="flex items-center border-l pl-3 gap-2">
                             <button onclick="downloadTemplateExcel(${tab === 'migrasi'})" class="text-xs bg-blue-50 text-blue-600 px-3 py-2 rounded hover:bg-blue-100 font-medium whitespace-nowrap" title="Download template Excel"><i class="fas fa-download mr-1"></i>Template</button>
                             <button onclick="document.getElementById('importFileInput_${tab}').click()" class="text-xs bg-bjGreen text-white px-3 py-2 rounded hover:bg-bjGreenDark font-medium whitespace-nowrap"><i class="fas fa-upload mr-1"></i>Import Excel</button>
                             <input type="file" id="importFileInput_${tab}" accept=".xlsx,.xls" onchange="handleInputImport(this, ${tab === 'migrasi'})" class="hidden">
-                        </div>
+                        </div>` : ''}
                     </div>
                 </div>`;
 

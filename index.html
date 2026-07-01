@@ -288,9 +288,12 @@
                     <button onclick="toggleSidebar()" class="text-gray-500 hover:text-bjGreen focus:outline-none md:hidden mr-4"><i class="fas fa-bars text-xl"></i></button>
                     <h2 class="text-lg sm:text-xl font-semibold text-gray-800 truncate" id="pageTitle">Dashboard</h2>
                 </div>
-                <div class="flex items-center space-x-3 sm:space-x-4">
+                <div class="flex items-center space-x-2 sm:space-x-3">
                     <button onclick="refreshData()" class="flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded border border-blue-200 transition text-sm font-semibold shadow-sm">
                         <i class="fas fa-sync-alt"></i> <span class="hidden sm:inline">Refresh Data</span>
+                    </button>
+                    <button onclick="logout()" class="flex items-center justify-center space-x-2 bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded border border-red-200 transition text-sm font-semibold shadow-sm" title="Keluar">
+                        <i class="fas fa-sign-out-alt"></i> <span class="hidden sm:inline">Keluar</span>
                     </button>
                     <div class="text-xs sm:text-sm text-gray-500 hidden md:block" id="currentDate"></div>
                 </div>
